@@ -19,6 +19,7 @@ from demandcast.vn1.seasonal_calibration import (
 from demandcast.vn1.shadow import (
     ShadowEvaluator,
     ShadowForecastRecord,
+    ShadowPilotConfig,
     ShadowStore,
     VN1ShadowPipeline,
 )
@@ -43,6 +44,7 @@ __all__ = [
     "VN1ShadowPipeline",
     "ShadowEvaluator",
     "ShadowForecastRecord",
+    "ShadowPilotConfig",
     "ForecastTimeContract",
     "create_time_contract",
 ]

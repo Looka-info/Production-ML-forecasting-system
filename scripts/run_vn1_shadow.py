@@ -79,6 +79,7 @@ def cmd_forecast(args: argparse.Namespace) -> int:
         series_subset=args.series_subset,
         provider=args.provider,
         mode=args.mode,
+        candidates=args.candidates,
     )
 
     print("\n" + "=" * 85)
@@ -96,9 +97,14 @@ def cmd_forecast(args: argparse.Namespace) -> int:
     print(f"Production Model:  {res['production']['model_name']} ({res['production']['version']})")
     print(f"  Status:          {res['production']['status']}")
     print(f"  Forecasts:       {res['production']['forecasts_count']}")
-    print(f"Candidate D Model: {res['candidate_d']['model_name']} ({res['candidate_d']['version']})")
-    print(f"  Status:          {res['candidate_d']['status']}")
-    print(f"  Forecasts:       {res['candidate_d']['forecasts_count']}")
+    if "candidate_c" in res and res["candidate_c"]["status"] == "SUCCESS":
+        print(f"Candidate C Model: {res['candidate_c']['model_name']} ({res['candidate_c']['version']})")
+        print(f"  Status:          {res['candidate_c']['status']}")
+        print(f"  Forecasts:       {res['candidate_c']['forecasts_count']}")
+    if "candidate_d" in res and res["candidate_d"]["status"] == "SUCCESS":
+        print(f"Candidate D Model: {res['candidate_d']['model_name']} ({res['candidate_d']['version']})")
+        print(f"  Status:          {res['candidate_d']['status']}")
+        print(f"  Forecasts:       {res['candidate_d']['forecasts_count']}")
     print("-" * 85)
     print(
         f"Persistence:       {res['persistence']['inserted']} inserted, {res['persistence']['skipped_duplicates']} duplicate records skipped"
@@ -311,6 +317,13 @@ def main():
         choices=["historical_replay", "prospective_live"],
         default="historical_replay",
         help="Inference mode (clearly distinguishes retrospective replay from live)",
+    )
+    p_fc.add_argument(
+        "--candidates",
+        nargs="+",
+        default=["candidate_d"],
+        choices=["candidate_c", "candidate_d"],
+        help="Candidate models to execute in shadow mode alongside production",
     )
     p_fc.add_argument("--db-path", type=str, default=None, help="Custom SQLite db path")
 

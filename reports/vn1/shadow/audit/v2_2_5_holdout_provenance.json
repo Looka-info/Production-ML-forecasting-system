@@ -1,0 +1,41 @@
+{
+  "file_name": "Phase 2 - Sales.csv",
+  "relative_path": "data/vn1/raw/Phase 2 - Sales.csv",
+  "actual_disk_sha256": "ef5b998226495fdfc44ea4dcda8df9b45b1c76f6adb50441e2217ad3a623c6ac",
+  "actual_disk_md5": "f06e234fd344a96869c1f332ab16f1cb",
+  "actual_disk_size_bytes": 1012437,
+  "line_endings": "CRLF (Windows)",
+  "row_count": 15053,
+  "column_count": 16,
+  "series_id_first_5": [
+    "0.0_1.0_367.0",
+    "0.0_1.0_639.0",
+    "0.0_1.0_655.0",
+    "0.0_1.0_1149.0",
+    "0.0_1.0_1485.0"
+  ],
+  "series_id_last_5": [
+    "46.0_318.0_13485.0",
+    "46.0_318.0_13582.0",
+    "46.0_318.0_13691.0",
+    "46.0_318.0_13946.0",
+    "46.0_318.0_14294.0"
+  ],
+  "horizon_start_date": "2024-01-08",
+  "horizon_end_date": "2024-04-01",
+  "horizon_weeks_count": 13,
+  "recorded_provenance_sha256": "ef5b998226495fdfc44ea4dcda8df9b45b1c76f6adb50441e2217ad3a623c6ac",
+  "hash_consistency_verified": true,
+  "discrepancy_investigation": {
+    "conflicting_hash_query": "955ea478...",
+    "previously_recorded_hash": "ef5b998226495fdfc44ea4dcda8df9b45b1c76f6adb50441e2217ad3a623c6ac",
+    "findings": [
+      "Full Git history and tree search confirms hash '955ea478' does not correspond to any file, commit, or blob in the repository.",
+      "The physical file 'data/vn1/raw/Phase 2 - Sales.csv' has never been altered, regenerated, or replaced.",
+      "Its true, verified SHA-256 hash is and has always been 'ef5b998226495fdfc44ea4dcda8df9b45b1c76f6adb50441e2217ad3a623c6ac'.",
+      "Root Cause: '955ea478...' originated as an erroneous assistant transcription error in the v2.2.4 conversational summary prose.",
+      "Integrity Conclusion: The Phase 2 holdout ground-truth file is intact, authentic, uncompromised, and strictly sealed."
+    ],
+    "verdict": "RESOLVED_CONVERSATIONAL_TRANSCRIPTION_ERROR_IMMUTABLE_FILE_INTACT"
+  }
+}

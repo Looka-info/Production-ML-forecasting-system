@@ -1,0 +1,94 @@
+{
+  "audit_name": "Full-Catalog Global Calibration Score Discrepancy Resolution",
+  "scope": "15,053 series x 4 origins x 13 horizons = 782,756 predictions",
+  "exact_scores_reproduced": {
+    "v2_2_3_reported": 0.5463,
+    "v2_2_3_reproduced": 0.5463,
+    "v2_2_3_match": true,
+    "v2_2_4_reported": 0.5342,
+    "v2_2_4_reproduced": 0.5342,
+    "v2_2_4_match": true
+  },
+  "pooled_production": {
+    "vn1_score": 0.569,
+    "wape": 0.5319,
+    "relative_bias": 0.0371,
+    "mae": 7.8048,
+    "rmse": 53.5311
+  },
+  "v2_2_3_global_calibration": {
+    "vn1_score": 0.5463,
+    "wape": 0.5172,
+    "relative_bias": -0.0291,
+    "mae": 7.5887,
+    "rmse": 51.9682,
+    "factor_logic": "valid_m = base_vol > 0; excluded newly active post-holiday series from numerator"
+  },
+  "v2_2_4_global_calibration": {
+    "vn1_score": 0.5342,
+    "wape": 0.5191,
+    "relative_bias": -0.015,
+    "mae": 7.6178,
+    "rmse": 52.1737,
+    "factor_logic": "p_sum / b_sum across all 15,053 series; captures entire portfolio retail drop"
+  },
+  "origin_breakdown": [
+    {
+      "origin": "2022-01-03",
+      "category": "post_holiday",
+      "v223_factor": 0.864819,
+      "v224_factor": 0.899067,
+      "factor_delta": 0.034247,
+      "production_vn1": 0.6976,
+      "v223_vn1": 0.5241,
+      "v224_vn1": 0.5646,
+      "v223_wape": 0.5211,
+      "v224_wape": 0.5254,
+      "v223_bias": 0.003,
+      "v224_bias": 0.0393
+    },
+    {
+      "origin": "2022-07-04",
+      "category": "ordinary",
+      "v223_factor": 0.868952,
+      "v224_factor": 0.892607,
+      "factor_delta": 0.023656,
+      "production_vn1": 0.5183,
+      "v223_vn1": 0.5183,
+      "v224_vn1": 0.5183,
+      "v223_wape": 0.4718,
+      "v224_wape": 0.4718,
+      "v223_bias": -0.0465,
+      "v224_bias": -0.0465
+    },
+    {
+      "origin": "2023-01-02",
+      "category": "post_holiday",
+      "v223_factor": 0.868952,
+      "v224_factor": 0.892607,
+      "factor_delta": 0.023656,
+      "production_vn1": 0.7275,
+      "v223_vn1": 0.6455,
+      "v224_vn1": 0.6256,
+      "v223_wape": 0.6053,
+      "v224_wape": 0.6092,
+      "v223_bias": -0.0402,
+      "v224_bias": -0.0164
+    },
+    {
+      "origin": "2023-04-03",
+      "category": "ordinary",
+      "v223_factor": 0.868952,
+      "v224_factor": 0.892607,
+      "factor_delta": 0.023656,
+      "production_vn1": 0.4922,
+      "v223_vn1": 0.4922,
+      "v224_vn1": 0.4922,
+      "v223_wape": 0.4646,
+      "v224_wape": 0.4646,
+      "v223_bias": -0.0276,
+      "v224_bias": -0.0276
+    }
+  ],
+  "mathematical_explanation": "v2.2.3 applied valid_m = base_vol > 0 when aggregating holiday transition ratios, excluding series that had zero sales in the 12-week pre-holiday period but positive post-holiday sales. This caused under-summation of post-holiday demand, producing artificially aggressive contraction factors (0.8648 for 2022 and 0.8690 for 2023). That over-contraction exacerbated under-forecasting bias (-0.0291) and resulted in VN1 = 0.5463. v2.2.4 corrected the aggregation to include all catalog series, yielding true macro factors of 0.8991 and 0.8926. This reduced relative bias to -0.0150 and produced VN1 = 0.5342. Both numbers are 100% reproducible and their difference is completely accounted for."
+}

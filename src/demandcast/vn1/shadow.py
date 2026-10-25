@@ -10,7 +10,7 @@ import json
 import logging
 import sqlite3
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -19,6 +19,10 @@ import pandas as pd
 
 from demandcast.config import get_project_root
 from demandcast.vn1.baselines import VN1MovingAverageForecaster
+from demandcast.vn1.calibration_gate import (
+    CalibrationGateConfig,
+    PreOriginCalibrationGate,
+)
 from demandcast.vn1.config import VN1Config, load_vn1_config
 from demandcast.vn1.metrics import compute_all_vn1_metrics
 from demandcast.vn1.registry import VN1ModelRegistry
@@ -80,6 +84,52 @@ class ShadowForecastRecord:
         d = asdict(self)
         d["is_candidate"] = 1 if self.is_candidate else 0
         return d
+
+
+@dataclass
+class ShadowPilotConfig:
+    """Governs prospective live shadow pilot configuration, candidate registration, and safeguards."""
+
+    pilot_name: str = "VN1_Challenger_Live_Shadow_Pilot"
+    version: str = "v2.2.5"
+    active_production_model: str = "Baseline_MovingAvg12_Official"
+    challenger_c_model: str = "PreOrigin_Evidence_Gated_Calibrated"
+    challenger_d_model: str = "Baseline_MovingAvg12_PostHolidayTargeted"
+    is_active: bool = False  # Inactive until external live feed is genuinely configured
+    provider_id: str = "NOT_CONFIGURED"
+    provider_status: str = "NOT_CONFIGURED"
+    max_segment_degradation: float = 0.0100  # Max tolerated tier degradation (+1.0% VN1 score)
+    promotion_policy: str = "MANUAL_SIGN_OFF_REQUIRED"  # Zero automatic promotion
+    eligibility_gate_config: CalibrationGateConfig = field(default_factory=CalibrationGateConfig)
+
+    def get_status_summary(self) -> dict[str, Any]:
+        return {
+            "pilot_name": self.pilot_name,
+            "version": self.version,
+            "is_active": self.is_active,
+            "provider_id": self.provider_id,
+            "provider_status": self.provider_status,
+            "active_production_model": self.active_production_model,
+            "challengers": [
+                {
+                    "model_identifier": "candidate_c_gated",
+                    "model_name": self.challenger_c_model,
+                    "role": "Validated Challenger",
+                    "eligibility_gate_enforced": True,
+                },
+                {
+                    "model_identifier": "candidate_d_client_eb",
+                    "model_name": self.challenger_d_model,
+                    "role": "Experimental Unconditional Baseline",
+                    "eligibility_gate_enforced": False,
+                },
+            ],
+            "promotion_safeguard": self.promotion_policy,
+            "segment_safety_limit": self.max_segment_degradation,
+            "gate_volume_floor": self.eligibility_gate_config.min_trailing_12w_volume,
+            "gate_zero_fraction_ceiling": self.eligibility_gate_config.max_zero_demand_fraction,
+            "pilot_readiness": "READY_FOR_PROSPECTIVE_FEED_INACTIVE",
+        }
 
 
 class ShadowStore:
@@ -286,6 +336,7 @@ class ShadowStore:
         origin_date: str | None = None,
         target_week: str | None = None,
         is_candidate: bool | None = None,
+        model_identifier: str | None = None,
         reconciliation_status: str | None = None,
     ) -> pd.DataFrame:
         """Query stored shadow forecasts into a pandas DataFrame."""
@@ -304,6 +355,9 @@ class ShadowStore:
         if is_candidate is not None:
             query += " AND is_candidate = ?"
             params.append(1 if is_candidate else 0)
+        if model_identifier is not None:
+            query += " AND model_identifier = ?"
+            params.append(model_identifier)
         if reconciliation_status is not None:
             query += " AND reconciliation_status = ?"
             params.append(reconciliation_status)
@@ -538,6 +592,7 @@ class VN1ShadowPipeline:
         provider: str = "file_batch",
         mode: Literal["historical_replay", "prospective_live"] = "historical_replay",
         as_of_timestamp: str | datetime | None = None,
+        candidates: tuple[str, ...] | list[str] = ("candidate_d",),
     ) -> dict[str, Any]:
         """Execute shadow inference across production model and experimental Candidate D.
 
@@ -778,15 +833,94 @@ class VN1ShadowPipeline:
             cand_status = "FAILED"
             cand_error = str(e)
 
+        # 3b. Resolve and Run Candidate C (Pre-Origin Gated Calibrated Forecaster)
+        cand_c_status = "NOT_REQUESTED"
+        cand_c_error = None
+        cand_c_records: list[ShadowForecastRecord] = []
+        cand_c_version = "v2.2-candidate_c"
+        cand_c_model_name = "PreOrigin_Evidence_Gated_Calibrated"
+
+        if "candidate_c" in candidates:
+            try:
+                gate = PreOriginCalibrationGate()
+                elig_df = gate.evaluate_series_eligibility(history_df, origin_date=origin_date)
+
+                for _, row in prod_preds.iterrows():
+                    sid = str(row["series_id"])
+                    is_elig = bool(elig_df.loc[sid, "is_eligible"]) if sid in elig_df.index else False
+                    parts = sid.split("_")
+                    cid = parts[0] if len(parts) > 0 else None
+                    wid = parts[1] if len(parts) > 1 else None
+                    pid = parts[2] if len(parts) > 2 else sid
+                    t_week = (
+                        row["week_start"].strftime("%Y-%m-%d")
+                        if hasattr(row["week_start"], "strftime")
+                        else str(row["week_start"])
+                    )
+                    h_step = int(row["horizon_step"])
+
+                    t_dt = pd.to_datetime(t_week)
+                    _, iso_wk, _ = t_dt.isocalendar()
+                    is_post_holiday = 1 <= iso_wk <= 13
+
+                    p_val_prod = float(max(0.0, row["predicted_sales"]))
+
+                    if is_elig and is_post_holiday:
+                        matching_d = [r for r in cand_records if r.series_id == sid and r.horizon_step == h_step]
+                        if matching_d:
+                            p_val = matching_d[0].predicted_sales
+                            factor_val = matching_d[0].calibration_factor or 1.0
+                        else:
+                            p_val = p_val_prod
+                            factor_val = 1.0
+                    else:
+                        p_val = p_val_prod
+                        factor_val = 1.0
+
+                    rec = ShadowForecastRecord(
+                        record_id=str(uuid.uuid4()),
+                        run_id=run_id,
+                        dataset_provider=provider,
+                        snapshot_hash=snapshot_hash,
+                        series_id=sid,
+                        client_id=cid,
+                        warehouse_id=wid,
+                        product_id=pid,
+                        origin_date=orig_str,
+                        target_week=t_week,
+                        horizon_step=h_step,
+                        model_identifier=f"candidate_c_{cand_c_version}",
+                        model_name=cand_c_model_name,
+                        model_version=cand_c_version,
+                        is_candidate=True,
+                        predicted_sales=p_val,
+                        raw_predicted_sales=p_val_prod,
+                        calibration_factor=factor_val,
+                        calibration_metadata=json.dumps({"is_eligible": is_elig}),
+                        execution_timestamp=created_at,
+                        forecast_status="SUCCESS",
+                        as_of_timestamp=as_of_str,
+                        last_observed_week_start=orig_str,
+                    )
+                    cand_c_records.append(rec)
+                cand_c_status = "SUCCESS"
+            except Exception as e:
+                logger.error(f"Candidate C inference failed in shadow runner: {e}", exc_info=True)
+                cand_c_status = "FAILED"
+                cand_c_error = str(e)
+
         # 4. Determine overall run status
-        if prod_status == "SUCCESS" and cand_status == "SUCCESS":
+        success_count = sum(s == "SUCCESS" for s in [prod_status, cand_status, cand_c_status])
+        failed_count = sum(s == "FAILED" for s in [prod_status, cand_status, cand_c_status])
+
+        if failed_count == 0 and success_count > 0:
             overall_status = "SUCCEEDED"
-        elif prod_status == "SUCCESS" or cand_status == "SUCCESS":
+        elif success_count > 0:
             overall_status = "PARTIAL_FAILURE"
         else:
             overall_status = "FAILED"
 
-        all_records = prod_records + cand_records
+        all_records = prod_records + cand_records + cand_c_records
 
         # 5. Persist forecasts to SQLite Store
         save_res = self.store.save_forecasts(all_records)
@@ -808,7 +942,7 @@ class VN1ShadowPipeline:
             "candidate_version": cand_version,
             "forecasts_count": len(all_records),
             "awaiting_actuals_count": len(all_records),
-            "error_message": prod_error or cand_error,
+            "error_message": prod_error or cand_error or cand_c_error,
             "as_of_timestamp": as_of_str,
             "last_observed_week_start": orig_str,
         }
@@ -829,6 +963,13 @@ class VN1ShadowPipeline:
                 "model_name": prod_model_name,
                 "forecasts_count": len(prod_records),
                 "error": prod_error,
+            },
+            "candidate_c": {
+                "status": cand_c_status,
+                "version": cand_c_version,
+                "model_name": cand_c_model_name,
+                "forecasts_count": len(cand_c_records),
+                "error": cand_c_error,
             },
             "candidate_d": {
                 "status": cand_status,

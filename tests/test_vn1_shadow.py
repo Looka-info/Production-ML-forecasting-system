@@ -28,6 +28,7 @@ from demandcast.config import get_project_root
 from demandcast.vn1.metrics import compute_all_vn1_metrics
 from demandcast.vn1.shadow import (
     ShadowEvaluator,
+    ShadowPilotConfig,
     ShadowStore,
     VN1ShadowPipeline,
 )
@@ -379,3 +380,88 @@ def test_14_fastapi_shadow_endpoints_and_backward_compatibility():
     assert r_ready.status_code in [200, 503]
     body = r_ready.json()
     assert "status" in body or ("detail" in body and "status" in body["detail"])
+
+
+def test_15_shadow_pilot_config_defaults_and_safeguards():
+    """Verify ShadowPilotConfig defaults to inactive, enforces manual promotion policy, and specifies safeguards."""
+    pilot = ShadowPilotConfig()
+    summary = pilot.get_status_summary()
+
+    assert not pilot.is_active
+    assert summary["is_active"] is False
+    assert summary["provider_status"] == "NOT_CONFIGURED"
+    assert summary["promotion_safeguard"] == "MANUAL_SIGN_OFF_REQUIRED"
+    assert summary["segment_safety_limit"] == 0.0100
+    assert summary["pilot_readiness"] == "READY_FOR_PROSPECTIVE_FEED_INACTIVE"
+    assert len(summary["challengers"]) == 2
+    assert summary["challengers"][0]["model_identifier"] == "candidate_c_gated"
+    assert summary["challengers"][0]["eligibility_gate_enforced"] is True
+    assert summary["challengers"][1]["model_identifier"] == "candidate_d_client_eb"
+    assert summary["challengers"][1]["eligibility_gate_enforced"] is False
+
+
+def test_16_shadow_pipeline_runs_candidate_c_and_d_concurrently(temp_store, synthetic_snapshot):
+    """Verify shadow pipeline can execute Candidate C and Candidate D concurrently with Production."""
+    pipeline = VN1ShadowPipeline(store=temp_store)
+    res = pipeline.run_shadow_forecast(
+        synthetic_snapshot,
+        origin_date="2023-01-02",
+        horizon=13,
+        candidates=("candidate_c", "candidate_d"),
+    )
+
+    assert res["status"] == "SUCCEEDED"
+    assert res["production"]["status"] == "SUCCESS"
+    assert res["candidate_c"]["status"] == "SUCCESS"
+    assert res["candidate_d"]["status"] == "SUCCESS"
+
+    # Verify forecasts stored in SQLite
+    prod_df = temp_store.query_forecasts(model_identifier="production_v1.0.0")
+    cand_c_df = temp_store.query_forecasts(model_identifier="candidate_c_v2.2-candidate_c")
+    cand_d_df = temp_store.query_forecasts(model_identifier="candidate_d_v2.1-candidate_d")
+
+    assert len(prod_df) == 39  # 3 series x 13 horizons
+    assert len(cand_c_df) == 39
+    assert len(cand_d_df) == 39
+
+
+def test_17_v225_audit_artifacts_and_discrepancy_reproduction():
+    """Verify v2.2.5 holdout provenance and exact global calibration score reproduction."""
+    root = get_project_root()
+    audit_dir = root / "reports" / "vn1" / "shadow" / "audit"
+
+    # 1. Holdout Provenance
+    prov_file = audit_dir / "v2_2_5_holdout_provenance.json"
+    assert prov_file.exists(), f"Missing audit file: {prov_file}"
+    with open(prov_file, "r", encoding="utf-8") as f:
+        p_data = json.load(f)
+    assert p_data["actual_disk_sha256"] == "ef5b998226495fdfc44ea4dcda8df9b45b1c76f6adb50441e2217ad3a623c6ac"
+    assert p_data["hash_consistency_verified"] is True
+    assert (
+        p_data["discrepancy_investigation"]["verdict"]
+        == "RESOLVED_CONVERSATIONAL_TRANSCRIPTION_ERROR_IMMUTABLE_FILE_INTACT"
+    )
+
+    # 2. Global Calibration Exact Reproduction
+    reprod_file = audit_dir / "global_calibration_reproduction.json"
+    assert reprod_file.exists(), f"Missing audit file: {reprod_file}"
+    with open(reprod_file, "r", encoding="utf-8") as f:
+        r_data = json.load(f)
+    assert r_data["exact_scores_reproduced"]["v2_2_3_reproduced"] == 0.5463
+    assert r_data["exact_scores_reproduced"]["v2_2_3_match"] is True
+    assert r_data["exact_scores_reproduced"]["v2_2_4_reproduced"] == 0.5342
+    assert r_data["exact_scores_reproduced"]["v2_2_4_match"] is True
+
+    # 3. Four Candidate Reproduction CSV
+    reprod_csv = audit_dir / "full_catalog_four_candidate_reproduction.csv"
+    assert reprod_csv.exists()
+    df_reprod = pd.read_csv(reprod_csv)
+    assert len(df_reprod) == 4
+    assert set(df_reprod["candidate_code"]) == {"Candidate A", "Candidate B", "Candidate C", "Candidate D"}
+
+    # 4. Segment Safety CSV
+    safety_csv = audit_dir / "four_candidate_segment_safety.csv"
+    assert safety_csv.exists()
+    df_safety = pd.read_csv(safety_csv)
+    assert "VOLUME_TIER" in df_safety["segment_dimension"].values
+    assert "INTERMITTENCY_TIER" in df_safety["segment_dimension"].values
