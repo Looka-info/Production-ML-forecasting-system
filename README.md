@@ -390,13 +390,9 @@ demandcast/
 3. **Temporal Contract**: The standard `/forecast` endpoint rejects forecast origins predating the model training cutoff (`2011-11-07`) to prevent in-sample lookahead bias.
 4. **History Depth Requirements**: Minimum history is 4 weeks for the active Moving Average forecaster, 13 weeks for the supervised ML candidate (or 53 weeks if seasonal lag 52 is enabled).
 5. **Container Deployment Status**: The multi-stage `Dockerfile` and `compose.yaml` configurations are fully implemented with read-only release volume mounts; local container runtime execution could not be verified because the host Docker Desktop engine is currently stopped.
-6. **Continuous Integration Status**: GitHub Actions CI workflow is configured in `.github/workflows/ci.yml` (linting, pytest suite, and docker build); execution has not yet run on a remote hosted runner because this local workspace is not initialized as a git repository with a remote tracking branch.
-7. **Git Repository Initialization**: The workspace directory is currently an unversioned folder on Windows (verified via `git rev-parse --show-toplevel` returning not a git repository). To initialize Git version control and connect to a remote repository:
+6. **Continuous Integration Status**: GitHub Actions CI workflow is configured in `.github/workflows/ci.yml` (linting, pytest suite, and docker build); execution has not yet run on a remote hosted runner because this local repository has no remote tracking branch configured.
+7. **Git Repository Status**: The local repository has been initialized on branch `main` with the root commit tracking all verified production code, configs, tests, documentation, and release v1.0.0 artifacts. To connect to a remote repository when ready:
    ```powershell
-   git init
-   git add .
-   git commit -m "feat: complete production demandcast forecasting system release v1.0.0"
-   # git remote add origin <your-repository-url>
-   # git branch -M main
-   # git push -u origin main
+   git remote add origin <your-repository-url>
+   git push -u origin main
    ```
