@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "demandcast"
+version = "0.1.0"
+description = "DemandCast - A Complete Production ML Forecasting System"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Senior ML Engineering Team" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.26.0,<3.0.0",
+    "pandas>=2.1.0,<4.0.0",
+    "scipy>=1.11.0",
+    "scikit-learn>=1.3.0",
+    "pydantic>=2.5.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "mlflow>=2.10.0",
+    "matplotlib>=3.8.0",
+    "seaborn>=0.13.0",
+    "pyyaml>=6.0.1",
+    "requests>=2.31.0",
+    "openpyxl>=3.1.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "httpx>=0.25.0",
+    "httpx2>=2.16.0",
+    "ruff>=0.1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501",  # Line length
+    "B008",  # FastAPI Depends() in default argument
+    "G201",  # Logging formatting
+    "BLE001",# Broad exception catching in registry/scripts
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+filterwarnings = [
+    "error",
+]

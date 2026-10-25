@@ -1,0 +1,10 @@
+{
+  "current_version": "v1.0.0",
+  "promoted_at": "2026-10-25T10:37:15.691164+00:00",
+  "checksum_sha256": "428ea2d98439c98efcccc8ebafbecf057a9e1fd54a56ba26edd8e386bcd9b728",
+  "release_dir": "models/releases/v1.0.0",
+  "reason": "Promoted winning 4-week moving average baseline on validation backtests (WAPE: 55.16%, MASE: 0.5837 vs HGB 88.30%) under audited quality alert override",
+  "quality_status": "ALERT",
+  "quality_alert": "Validation WAPE (55.16%) exceeds target threshold (50.00%). Promoted under audited operational override as best evaluated candidate.",
+  "model_freshness_status": "stale_historical_dataset"
+}

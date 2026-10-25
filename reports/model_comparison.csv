@@ -1,0 +1,9 @@
+model_name,evaluation_stage,origins_count,mae,rmse,wape,smape,mase,bias,relative_bias,sample_count
+Baseline_Naive,validation_backtests,3,309.2278,549.1014,0.6664,60.4163,0.738,-2.15,-0.0046,180
+Baseline_MovingAvg4,validation_backtests,3,255.9361,491.4708,0.5516,52.1183,0.5837,-24.6611,-0.0531,180
+Baseline_SeasonalNaive52,validation_backtests,3,578.9389,1311.0844,1.2477,82.3267,1.2348,376.3722,0.8111,180
+HistGradientBoosting,validation_backtests,3,409.7258,683.9085,0.883,74.6979,0.968,241.0954,0.5196,180
+Baseline_Naive,final_heldout_test,1,247.3333,398.4069,0.5516,52.4111,0.6604,57.3778,0.128,45
+Baseline_MovingAvg4,final_heldout_test,1,221.5444,373.5171,0.4941,50.2726,0.5183,72.8444,0.1625,45
+Baseline_SeasonalNaive52,final_heldout_test,1,473.2444,706.6523,1.0555,83.3011,1.0858,356.8889,0.796,45
+HistGradientBoosting,final_heldout_test,1,247.7352,454.8843,0.5525,59.682,0.6099,103.6959,0.2313,45

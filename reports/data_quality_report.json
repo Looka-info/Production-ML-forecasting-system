@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-10-25T10:19:20.111478+00:00",
+  "initial_raw_rows": 1067371,
+  "exclusions": {
+    "null_stock_code_or_date": 0,
+    "invalid_date_parse": 0,
+    "cancelled_invoices": 19494,
+    "non_positive_quantity": 3457,
+    "invalid_unit_price": 2750,
+    "non_merchandise_codes": 4299,
+    "duplicate_rows": 33672
+  },
+  "cleaning_rules": {
+    "min_quantity": 1,
+    "min_unit_price": 0.001,
+    "exclude_cancelled": true,
+    "non_merchandise_codes": [
+      "POST",
+      "D",
+      "M",
+      "BANK CHARGES",
+      "PADS",
+      "DOT",
+      "CRUK",
+      "TEST",
+      "ADJUST",
+      "ADJUST2"
+    ],
+    "week_start_day": "W-MON"
+  },
+  "cancellations_count": 19494,
+  "final_cleaned_rows": 1003699,
+  "retention_rate_pct": 94.03,
+  "date_range": {
+    "min_date": "2009-12-01 07:45:00",
+    "max_date": "2011-12-09 12:50:00"
+  },
+  "unique_products": 4737,
+  "total_units_sold": 11188147
+}

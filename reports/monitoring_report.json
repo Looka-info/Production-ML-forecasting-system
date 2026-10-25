@@ -1,0 +1,249 @@
+{
+  "status": "ALERT",
+  "timestamp": "2026-10-25T10:21:14.155763+00:00",
+  "evaluated_observations": 180,
+  "metrics": {
+    "mae": 255.9361,
+    "rmse": 491.4708,
+    "wape": 0.5516,
+    "smape": 52.1183,
+    "raw_bias": -24.6611,
+    "bias": -24.6611,
+    "relative_bias": -0.0531,
+    "mase": null,
+    "count": 180
+  },
+  "residual_analysis": {
+    "mean_residual": -24.6611,
+    "std_residual": 490.8517,
+    "median_residual": 23.875,
+    "min_residual": -4523.5,
+    "max_residual": 1319.25,
+    "q25_residual": -131.75,
+    "q75_residual": 160.5
+  },
+  "by_horizon": {
+    "horizon_1": {
+      "mae": 216.6,
+      "rmse": 302.0293,
+      "wape": 0.4691,
+      "smape": 50.5201,
+      "raw_bias": -22.3333,
+      "bias": -22.3333,
+      "relative_bias": -0.0484,
+      "mase": null,
+      "count": 45
+    },
+    "horizon_2": {
+      "mae": 322.1333,
+      "rmse": 763.4322,
+      "wape": 0.715,
+      "smape": 54.1859,
+      "raw_bias": -11.1778,
+      "bias": -11.1778,
+      "relative_bias": -0.0248,
+      "mase": null,
+      "count": 45
+    },
+    "horizon_3": {
+      "mae": 257.3444,
+      "rmse": 433.697,
+      "wape": 0.5356,
+      "smape": 50.0109,
+      "raw_bias": -41.0889,
+      "bias": -41.0889,
+      "relative_bias": -0.0855,
+      "mase": null,
+      "count": 45
+    },
+    "horizon_4": {
+      "mae": 227.6667,
+      "rmse": 322.5379,
+      "wape": 0.4913,
+      "smape": 53.7561,
+      "raw_bias": -24.0444,
+      "bias": -24.0444,
+      "relative_bias": -0.0519,
+      "mase": null,
+      "count": 45
+    }
+  },
+  "by_series": {
+    "17003": {
+      "mae": 399.2083,
+      "rmse": 511.1819,
+      "wape": 0.8185,
+      "smape": 87.7673,
+      "raw_bias": -134.6667,
+      "bias": -134.6667,
+      "relative_bias": -0.2761,
+      "mase": null,
+      "count": 12
+    },
+    "21212": {
+      "mae": 240.0,
+      "rmse": 273.85,
+      "wape": 0.388,
+      "smape": 36.6376,
+      "raw_bias": 90.5,
+      "bias": 90.5,
+      "relative_bias": 0.1463,
+      "mase": null,
+      "count": 12
+    },
+    "21213": {
+      "mae": 230.4167,
+      "rmse": 269.3597,
+      "wape": 0.6207,
+      "smape": 58.6788,
+      "raw_bias": 14.9167,
+      "bias": 14.9167,
+      "relative_bias": 0.0402,
+      "mase": null,
+      "count": 12
+    },
+    "21232": {
+      "mae": 85.0833,
+      "rmse": 118.8469,
+      "wape": 0.3988,
+      "smape": 40.8458,
+      "raw_bias": -26.3333,
+      "bias": -26.3333,
+      "relative_bias": -0.1234,
+      "mase": null,
+      "count": 12
+    },
+    "21977": {
+      "mae": 283.5833,
+      "rmse": 295.8771,
+      "wape": 0.6851,
+      "smape": 69.1859,
+      "raw_bias": 122.0833,
+      "bias": 122.0833,
+      "relative_bias": 0.2949,
+      "mase": null,
+      "count": 12
+    },
+    "21980": {
+      "mae": 110.7083,
+      "rmse": 154.9788,
+      "wape": 0.771,
+      "smape": 75.2039,
+      "raw_bias": -8.0,
+      "bias": -8.0,
+      "relative_bias": -0.0557,
+      "mase": null,
+      "count": 12
+    },
+    "21984": {
+      "mae": 40.2917,
+      "rmse": 55.8154,
+      "wape": 0.5296,
+      "smape": 54.0205,
+      "raw_bias": 3.0,
+      "bias": 3.0,
+      "relative_bias": 0.0394,
+      "mase": null,
+      "count": 12
+    },
+    "71459": {
+      "mae": 126.125,
+      "rmse": 159.1093,
+      "wape": 0.641,
+      "smape": 60.6515,
+      "raw_bias": 23.6667,
+      "bias": 23.6667,
+      "relative_bias": 0.1203,
+      "mase": null,
+      "count": 12
+    },
+    "84077": {
+      "mae": 620.0,
+      "rmse": 1345.8649,
+      "wape": 0.5049,
+      "smape": 43.7139,
+      "raw_bias": -534.8333,
+      "bias": -534.8333,
+      "relative_bias": -0.4355,
+      "mase": null,
+      "count": 12
+    },
+    "84270": {
+      "mae": 0.0,
+      "rmse": 0.0,
+      "wape": null,
+      "smape": 0.0,
+      "raw_bias": 0.0,
+      "bias": 0.0,
+      "relative_bias": null,
+      "mase": null,
+      "count": 12
+    },
+    "84755": {
+      "mae": 117.9167,
+      "rmse": 154.2004,
+      "wape": 0.4893,
+      "smape": 49.7885,
+      "raw_bias": 57.1667,
+      "bias": 57.1667,
+      "relative_bias": 0.2372,
+      "mase": null,
+      "count": 12
+    },
+    "84879": {
+      "mae": 497.3333,
+      "rmse": 658.2168,
+      "wape": 0.6438,
+      "smape": 52.4349,
+      "raw_bias": 152.8333,
+      "bias": 152.8333,
+      "relative_bias": 0.1978,
+      "mase": null,
+      "count": 12
+    },
+    "84991": {
+      "mae": 251.9167,
+      "rmse": 292.3903,
+      "wape": 0.6634,
+      "smape": 64.9323,
+      "raw_bias": 0.8333,
+      "bias": 0.8333,
+      "relative_bias": 0.0022,
+      "mase": null,
+      "count": 12
+    },
+    "85099B": {
+      "mae": 583.375,
+      "rmse": 740.4334,
+      "wape": 0.4798,
+      "smape": 46.2535,
+      "raw_bias": -49.0,
+      "bias": -49.0,
+      "relative_bias": -0.0403,
+      "mase": null,
+      "count": 12
+    },
+    "85123A": {
+      "mae": 253.0833,
+      "rmse": 397.5767,
+      "wape": 0.4205,
+      "smape": 41.6596,
+      "raw_bias": -82.0833,
+      "bias": -82.0833,
+      "relative_bias": -0.1364,
+      "mase": null,
+      "count": 12
+    }
+  },
+  "alerts": [
+    "WAPE alert: 55.16% exceeds threshold (50.00%). Retraining or model review recommended."
+  ],
+  "drift_diagnostic": {
+    "diagnostic_type": "paired_marginal_distribution_ks_diagnostic",
+    "ks_statistic": 0.1333,
+    "p_value": 0.0815,
+    "marginal_divergence_flag": false,
+    "interpretation": "Descriptive diagnostic of marginal distribution shape difference between forecasts and observed actuals. Note: This is not an independent two-sample hypothesis test because predictions and actuals are paired by series and week."
+  },
+  "governance_note": "Forecasting quality cannot be assessed at inference time. Accuracy metrics and residual tracking require subsequent ground-truth demand observation."
+}

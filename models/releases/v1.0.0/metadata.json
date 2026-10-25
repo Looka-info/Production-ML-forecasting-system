@@ -1,0 +1,72 @@
+{
+  "version": "v1.0.0",
+  "created_at": "2026-10-25T10:20:14.986005+00:00",
+  "model_type": "Baseline_MovingAvg4",
+  "mlflow_run_id": "845005ef52c54ecf9e343465a0921c36",
+  "checksum_sha256": "428ea2d98439c98efcccc8ebafbecf057a9e1fd54a56ba26edd8e386bcd9b728",
+  "training_date_range": {
+    "min_date": "2009-11-30",
+    "max_date": "2011-11-07"
+  },
+  "supported_series": [
+    "17003",
+    "21212",
+    "21213",
+    "21232",
+    "21977",
+    "21980",
+    "21984",
+    "71459",
+    "84077",
+    "84270",
+    "84755",
+    "84879",
+    "84991",
+    "85099B",
+    "85123A"
+  ],
+  "feature_columns": [],
+  "validation_metrics": {
+    "model_name": "Baseline_MovingAvg4",
+    "evaluation_stage": "validation_backtests",
+    "origins_count": 3,
+    "mae": 255.9361,
+    "rmse": 491.4708,
+    "wape": 0.5516,
+    "smape": 52.1183,
+    "mase": 0.5837,
+    "bias": -24.6611,
+    "relative_bias": -0.0531,
+    "sample_count": 180
+  },
+  "test_metrics": {
+    "model_name": "Baseline_MovingAvg4",
+    "evaluation_stage": "final_heldout_test",
+    "origins_count": 1,
+    "mae": 221.5444,
+    "rmse": 373.5171,
+    "wape": 0.4941,
+    "smape": 50.2726,
+    "mase": 0.5183,
+    "bias": 72.8444,
+    "relative_bias": 0.1625,
+    "sample_count": 45
+  },
+  "quality_status": "ALERT",
+  "quality_alert": "Validation WAPE (55.16%) exceeds target threshold (50.00%). Promoted under audited operational override as best evaluated candidate.",
+  "model_freshness": {
+    "status": "stale_historical_dataset",
+    "dataset_vintage": "UCI Online Retail II (2009-2011)",
+    "training_cutoff_date": "2011-11-07",
+    "is_calibrated_for_modern_retail": false,
+    "stale_threshold_days": 90,
+    "intended_usage": "Historical benchmark research, algorithm evaluation, and reproducible backtesting only.",
+    "refresh_requirements": [
+      "Ingest contemporary POS/ERP transaction stream with continuous Monday weekly aggregation",
+      "Require minimum 52 weeks history for seasonal pattern modeling",
+      "Execute expanding-window chronological backtesting across origins",
+      "Verify validation WAPE <= 50.00% before non-override promotion"
+    ]
+  },
+  "notes": "Production release v1.0.0. Active strategy: 4-week moving average baseline. Promoted strictly based on superior validation performance (WAPE: 55.16%, MASE: 0.5837) over ML candidate (WAPE: 88.30%, MASE: 0.968)."
+}

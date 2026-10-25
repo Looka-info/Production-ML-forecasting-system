@@ -1,0 +1,92 @@
+# DemandCast Configuration
+project_name: "DemandCast"
+version: "1.0.0"
+
+data:
+  dataset_url: "https://archive.ics.uci.edu/static/public/502/online+retail+ii.zip"
+  raw_zip_path: "data/raw/online_retail_ii.zip"
+  raw_excel_path: "data/raw/online_retail_II.xlsx"
+  interim_clean_path: "data/interim/cleaned_transactions.parquet"
+  processed_weekly_path: "data/processed/weekly_demand.parquet"
+  selected_series_path: "data/processed/selected_series.json"
+  quality_report_path: "reports/data_quality_report.json"
+  summary_stats_path: "reports/series_summary.csv"
+
+cleaning:
+  min_quantity: 1
+  min_unit_price: 0.001
+  exclude_cancelled: true
+  non_merchandise_codes:
+    - "POST"
+    - "D"
+    - "M"
+    - "BANK CHARGES"
+    - "PADS"
+    - "DOT"
+    - "CRUK"
+    - "TEST"
+    - "ADJUST"
+    - "ADJUST2"
+  week_start_day: "W-MON"
+
+product_selection:
+  # Selected strictly using training period observations prior to selection_cutoff_date
+  selection_cutoff_date: "2010-10-01"
+  min_history_weeks: 35
+  min_total_sales: 500
+  top_n_products: 15
+
+features:
+  lags: [1, 2, 3, 4, 8, 12]
+  include_seasonal_lag: false
+  seasonal_lag: 52
+  rolling_windows: [4, 8, 12]
+  rolling_stats: ["mean", "std"]
+  zero_demand_window: 4
+  calendar:
+    - "week_of_year"
+    - "month"
+    - "sin_week"
+    - "cos_week"
+
+forecasting:
+  horizon: 4
+  min_history_required: 13
+  nonnegative_clipping: true
+
+backtesting:
+  n_origins: 3
+  horizon: 4
+  test_horizon: 3
+  step_size: 4
+
+model:
+  type: "HistGradientBoostingRegressor"
+  params:
+    learning_rate: 0.05
+    max_iter: 150
+    max_leaf_nodes: 31
+    min_samples_leaf: 5
+    random_state: 42
+    loss: "squared_error"
+
+tracking:
+  experiment_name: "demandcast_forecast_system"
+  tracking_uri: "sqlite:///mlflow.db"
+  artifact_location: "./mlruns"
+
+registry:
+  releases_dir: "models/releases"
+  current_pointer: "models/current.json"
+
+monitoring:
+  wape_alert_threshold: 0.50
+  bias_alert_threshold: 0.25
+  zero_demand_streak_warning: 3
+  extreme_value_std_multiplier: 4.0
+
+governance:
+  stale_model_threshold_days: 90
+  wape_promotion_gate_threshold: 0.50
+  allow_alert_promotion_override: false
+  dataset_vintage: "UCI Online Retail II (2009-2011)"

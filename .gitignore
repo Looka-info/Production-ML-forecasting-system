@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+env/
+venv/
+ENV/
+
+# Environment Variables & Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Data files (do not commit raw datasets or large processed/interim files)
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/dataset_provenance.json
+data/interim/*
+!data/interim/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# MLflow
+mlruns/
+mlflow.db
+.trash/
+
+# Models and Releases
+# Ignore scratch releases, but track verified v1.0.0 production release and active pointer
+models/releases/*
+!models/releases/v1.0.0/
+!models/releases/.gitkeep
+
+# Reports generated during backtesting (ignore large plot figures, keep tabular metrics/reports)
+reports/figures/*
+!reports/figures/.gitkeep
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
