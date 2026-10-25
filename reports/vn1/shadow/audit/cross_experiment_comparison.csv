@@ -1,0 +1,4 @@
+study_name,series_count,origins_evaluated,sample_count,production_vn1_score,candidate_d_vn1_score,delta_vn1_score,production_wape,candidate_d_wape,production_mae,candidate_d_mae,production_bias,candidate_d_bias,notes
+DemandCast v2.1 (4-Origin Pooled Backtest),250,"2022-01-03, 2022-07-04, 2023-01-02, 2023-04-03",13000,0.3813,0.3619,-0.0194,0.3693,0.3535,167.2795,160.1353,0.012,0.0084,Pooled across both post-holiday and ordinary calendar origins; top 250 Phase 0 series.
+DemandCast v2.1 (Single Origin 2023-01-02 Backtest),250,2023-01-02,3250,0.4988,0.4488,-0.05,0.4485,0.3974,214.6193,190.1962,0.0503,0.0514,Post-holiday origin only; top 250 Phase 0 series.
+DemandCast v2.2 (Shadow Replay 2023-01-02),50,2023-01-02,650,0.4264,0.357,-0.0694,0.3706,0.3121,405.5518,341.6112,0.0559,0.0448,Post-holiday origin only; top 50 highest-volume series up to 2023-01-02.

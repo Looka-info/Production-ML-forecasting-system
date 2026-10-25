@@ -379,7 +379,8 @@ class ShadowStore:
 
             matched_count = 0
             conflicts_count = 0
-            update_rows = []
+            conflicted_rec_ids: set[str] = set()
+            update_rows: dict[str, tuple[Any, ...]] = {}
 
             for row in matches:
                 rec_id = row["record_id"]
@@ -395,15 +396,20 @@ class ShadowStore:
                         f"Existing={existing_act}, Incoming={new_act}. Rejecting conflicting overwrite."
                     )
                     conflicts_count += 1
+                    conflicted_rec_ids.add(rec_id)
+                    if rec_id in update_rows:
+                        del update_rows[rec_id]
                     cursor.execute(
                         "UPDATE shadow_forecasts SET reconciliation_status = 'CONFLICT_REJECTED' WHERE record_id = ?",
                         (rec_id,),
                     )
-                else:
-                    update_rows.append((new_act, obs_at, source, reconciled_at, rec_id))
-                    matched_count += 1
+                elif rec_id not in conflicted_rec_ids:
+                    update_rows[rec_id] = (new_act, obs_at, source, reconciled_at, rec_id)
 
-            if update_rows:
+            valid_updates = list(update_rows.values())
+            matched_count = len(valid_updates)
+
+            if valid_updates:
                 cursor.executemany(
                     """
                     UPDATE shadow_forecasts
@@ -414,7 +420,7 @@ class ShadowStore:
                         reconciliation_status = 'MATCHED'
                     WHERE record_id = ?
                     """,
-                    update_rows,
+                    valid_updates,
                 )
 
             # Update run-level awaiting counts

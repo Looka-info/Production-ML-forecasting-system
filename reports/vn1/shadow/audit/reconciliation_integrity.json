@@ -1,0 +1,22 @@
+{
+  "audit_name": "Delayed Actuals Reconciliation Integrity",
+  "source_actuals_dataset": "data/vn1/raw/Phase 0 - Sales.csv",
+  "source_actuals_sha256": "034f50f7338c08cf1bb6facf8c5b36290f3e74d2e69db83099702d2a52f6534a",
+  "mode": "historical_replay",
+  "prospective_live_claim": false,
+  "reconciliation_rule": "Joins strictly on shadow_forecasts.series_id == shadow_actuals.series_id AND shadow_forecasts.target_week == shadow_actuals.week_start",
+  "actuals_ingested_count": 650,
+  "total_forecast_records": 1300,
+  "matched_forecast_records": 1300,
+  "pending_forecast_records": 0,
+  "conflicts_rejected_count": 0,
+  "immutability_verification": {
+    "prediction_overwritten_by_reconciliation": false,
+    "reconciliation_action": "Updates actual_sales, actual_observed_at, actual_source, reconciliation_status only; leaves predicted_sales untouched."
+  },
+  "idempotency_verification": {
+    "re_ingesting_same_actuals_duplicates_records": false,
+    "unique_constraint_enforced": "UNIQUE(series_id, week_start, source)"
+  },
+  "conclusion": "VERIFIED_LEAK_FREE_AND_IMMUTABLE"
+}

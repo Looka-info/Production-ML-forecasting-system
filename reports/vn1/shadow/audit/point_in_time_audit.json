@@ -1,0 +1,39 @@
+{
+  "audit_name": "Point-in-Time Correctness and Leakage Audit",
+  "forecast_origin_date": "2023-01-02",
+  "input_snapshot_sha256": "6817a7cad6397676eab60b15b5eb611c4b4d9dc99689f455ab5af05118d38af8",
+  "temporal_rules_enforced": [
+    "Data rows with week_start > origin_date are filtered out prior to inference.",
+    "Candidate D seasonal calibration estimator fits strictly on history <= origin_date.",
+    "Target actuals are never accessed during feature creation or factor calculation.",
+    "No future prices or forward retail indicators entered inference."
+  ],
+  "training_window": {
+    "start_date": "2020-07-06",
+    "end_date": "2023-01-02",
+    "weeks_count": 131,
+    "frequency": "W-MON"
+  },
+  "target_forecast_window": {
+    "start_date": "2023-01-09",
+    "end_date": "2023-04-03",
+    "weeks_count": 13,
+    "frequency": "W-MON"
+  },
+  "candidate_d_estimation_provenance": {
+    "origin_used": "2023-01-02",
+    "prior_transitions_observed": [
+      "2021-01-04",
+      "2022-01-03"
+    ],
+    "transitions_used_count": 2,
+    "global_factor_estimated": 0.9673,
+    "factor_clipping_bounds": [
+      0.5,
+      1.25
+    ],
+    "shrinkage_k": 100.0,
+    "future_actuals_used_in_estimation": false
+  },
+  "conclusion": "VERIFIED_POINT_IN_TIME_LEAK_FREE"
+}
