@@ -1,0 +1,5 @@
+candidate_code,candidate_name,model_type,sample_count,vn1_score,delta_vs_prod,wape,relative_bias,mae,rmse,smape
+Candidate A,Candidate A (Production Baseline),Baseline_MovingAvg12_Official,782756,0.569,0.0,0.5319,0.0371,7.8048,53.5311,67.7467
+Candidate B,Candidate B (Unconditional Global),Global_PostHoliday_Scalar,782756,0.5342,-0.0348,0.5191,-0.015,7.6178,52.1737,67.885
+Candidate C,Candidate C (Pre-Origin Gated),PreOrigin_Evidence_Gated_Calibrated,782756,0.5265,-0.0425,0.5134,0.0131,7.5332,52.1629,67.5567
+Candidate D,Candidate D (Unconditional Client EB),Empirical_Bayes_Client_Shrunk,782756,0.5108,-0.0582,0.5079,-0.0029,7.4531,51.6766,67.7341

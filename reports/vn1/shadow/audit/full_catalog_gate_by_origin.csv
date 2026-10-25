@@ -1,0 +1,5 @@
+origin_date,origin_label,origin_category,series_count,observations_per_model,catalog_global_factor,eligible_series_count,eligible_percentage,ineligible_fallback_count,fallback_percentage,cand_a_prod_vn1,cand_b_global_vn1,cand_c_gated_vn1,cand_d_client_eb_vn1,cand_c_delta_vs_prod,cand_b_delta_vs_prod,cand_d_delta_vs_prod,cand_a_wape,cand_c_wape,cand_a_bias,cand_c_bias,origin_runtime_sec
+2022-01-03,Post-Holiday Q1 2022,post_holiday,15053,195689,0.8991,1350,8.97,13703,91.03,0.6976,0.5646,0.6014,0.5549,-0.0962,-0.133,-0.1427,0.5515,0.52,0.146,0.0814,0.1
+2022-07-04,Ordinary Mid-Year Q3 2022,ordinary,15053,195689,0.8926,1200,7.97,13853,92.03,0.5183,0.5183,0.5183,0.5183,0.0,0.0,0.0,0.4718,0.4718,-0.0465,-0.0465,0.09
+2023-01-02,Post-Holiday Q1 2023,post_holiday,15053,195689,0.8926,1227,8.15,13826,91.85,0.7275,0.6256,0.646,0.6033,-0.0815,-0.1019,-0.1242,0.6356,0.5925,0.0918,0.0534,0.09
+2023-04-03,Ordinary Spring Q2 2023,ordinary,15053,195689,0.8926,1029,6.84,14024,93.16,0.4922,0.4922,0.4922,0.4922,0.0,0.0,0.0,0.4646,0.4646,-0.0276,-0.0276,0.09

@@ -1,0 +1,95 @@
+{
+  "evaluation_name": "DemandCast v2.2.4 Full-Catalog Calibration Gate Validation",
+  "timestamp_utc": "2026-10-25T17:43:48Z",
+  "dataset_source": "data/vn1/raw/Phase 0 - Sales.csv",
+  "dataset_sha256": "034f50f7338c08cf1bb6facf8c5b36290f3e74d2e69db83099702d2a52f6534a",
+  "total_catalog_series": 15053,
+  "forecast_horizon_weeks": 13,
+  "historical_origins_count": 4,
+  "total_forecast_observations_per_candidate": 782756,
+  "total_predictions_evaluated": 3131024,
+  "execution_runtime_seconds": 1.56,
+  "evaluation_throughput_obs_per_sec": 2012673.4,
+  "gate_configuration_hash_sha256": "dfc18b0d344fa2119526c9aea3757f4b17336f1b8c59403a945e8f1ff331671e",
+  "gate_configuration": {
+    "gate_name": "PreOriginEvidenceBasedGatingRule",
+    "version": "1.0.0",
+    "parameters": {
+      "min_trailing_12w_volume": 35.0,
+      "max_zero_demand_fraction": 0.5,
+      "require_holiday_surge_elevation": true,
+      "elevation_lookback_weeks": 26,
+      "fallback_factor": 1.0
+    }
+  },
+  "acceptance_criteria_evaluation": {
+    "all_criteria_met": true,
+    "criterion_1_catalog_improvement": {
+      "passed": true,
+      "actual_delta": -0.0425,
+      "threshold": -0.01
+    },
+    "criterion_2_segment_safety": {
+      "passed": true,
+      "max_segment_delta": 0.0024,
+      "threshold": 0.005
+    },
+    "criterion_3_origin_stability": {
+      "passed": true,
+      "max_origin_delta": 0.0,
+      "threshold": 0.002
+    },
+    "criterion_4_ordinary_calendar_neutrality": {
+      "passed": true,
+      "ordinary_origins_deltas": [
+        0.0,
+        0.0
+      ]
+    },
+    "criterion_5_sparsity_protection": {
+      "passed": true,
+      "sparse_fallback_percentages": [
+        100.0,
+        100.0,
+        98.75,
+        98.81
+      ],
+      "threshold_pct": 60.0
+    }
+  },
+  "model_governance_verdict": {
+    "active_production_release": "v1.0.0 (Baseline_MovingAvg12_Official)",
+    "candidate_c_status": "VALIDATED_CHALLENGER (Qualified for prospective live shadow pilot)",
+    "candidate_d_status": "EXPERIMENTAL_WITHHELD",
+    "production_promotion": "WITHHELD (Zero automatic promotion; prospective live stream verification required)"
+  },
+  "production_integrity_verification": {
+    "status": "VERIFIED_LOCKED",
+    "vn1_active_release": {
+      "dataset_profile": "vn1",
+      "current_version": "v1.0.0",
+      "promoted_at": "2026-10-25T13:37:42.011641+00:00",
+      "checksum_sha256": "2e98277531f730db4d57b6e58bf7da2c62998e5341946da58ec202a9a65ab809",
+      "release_dir": "models/profiles/vn1/releases/v1.0.0",
+      "reason": "Promoted winning VN1 model on Phase 1 validation",
+      "quality_status": "HEALTHY",
+      "quality_alert": null,
+      "model_freshness_status": "stale_historical_dataset"
+    },
+    "vn1_model_type": "Baseline_MovingAvg12_Official",
+    "vn1_current_json_sha256": "631530a17fa2980f36b44de6daab80f40476ab35a70d086451f2ebfaffa4858b",
+    "uci_active_release": {
+      "current_version": "v1.0.0",
+      "promoted_at": "2026-10-25T10:37:15.691164+00:00",
+      "checksum_sha256": "428ea2d98439c98efcccc8ebafbecf057a9e1fd54a56ba26edd8e386bcd9b728",
+      "release_dir": "models/releases/v1.0.0",
+      "reason": "Promoted winning 4-week moving average baseline on validation backtests (WAPE: 55.16%, MASE: 0.5837 vs HGB 88.30%) under audited quality alert override",
+      "quality_status": "ALERT",
+      "quality_alert": "Validation WAPE (55.16%) exceeds target threshold (50.00%). Promoted under audited operational override as best evaluated candidate.",
+      "model_freshness_status": "stale_historical_dataset"
+    },
+    "uci_current_json_sha256": "4d92f087b0c7b8ea230ba5e4dad0136dd7342360b752a6eb8a86cf425923f210",
+    "phase2_sales_sha256": "ef5b998226495fdfc44ea4dcda8df9b45b1c76f6adb50441e2217ad3a623c6ac",
+    "candidate_d_governance": "EXPERIMENTAL_WITHHELD"
+  }
+}
