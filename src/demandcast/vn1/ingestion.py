@@ -17,6 +17,7 @@ import hashlib
 import hmac
 import logging
 import os
+import re
 import time
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
@@ -50,10 +51,10 @@ class PreflightResult:
     provider_id: str
     schema_version: str
     provider_configured: bool
-    endpoint_url_masked: str | None
-    endpoint_valid: bool
-    endpoint_scheme: str | None
-    credentials_present: bool
+    endpoint_url_masked: str | None = None
+    endpoint_valid: bool = False
+    endpoint_scheme: str | None = None
+    credentials_present: bool = False
     network_reachable: bool | None = None
     remote_authenticated: bool | None = None
     schema_valid: bool | None = None
@@ -294,6 +295,7 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
         schema_version: str = "v1.0",
         endpoint_url: str | None = None,
         auth_token: str | None = None,
+        api_key: str | None = None,
         timeout_seconds: float | None = None,
         secret_getter: Callable[[str], str | None] | None = None,
         allow_insecure_http: bool = False,
@@ -302,17 +304,25 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
         self.secret_getter = secret_getter
 
         # Load credentials with preference: explicit argument -> secret_getter -> os.environ
-        raw_endpoint = endpoint_url
+        raw_endpoint = endpoint_url.strip() if isinstance(endpoint_url, str) and endpoint_url.strip() else None
         if not raw_endpoint and secret_getter:
-            raw_endpoint = secret_getter("DEMANDCAST_STREAM_ENDPOINT_URL")
+            val = secret_getter("DEMANDCAST_STREAM_ENDPOINT_URL")
+            raw_endpoint = val.strip() if isinstance(val, str) and val.strip() else None
         if not raw_endpoint:
-            raw_endpoint = os.environ.get("DEMANDCAST_STREAM_ENDPOINT_URL")
+            env_val = os.environ.get("DEMANDCAST_STREAM_ENDPOINT_URL")
+            raw_endpoint = env_val.strip() if isinstance(env_val, str) and env_val.strip() else None
 
-        raw_token = auth_token
+        raw_token = None
+        for cand in (auth_token, api_key):
+            if isinstance(cand, str) and cand.strip():
+                raw_token = cand.strip()
+                break
         if not raw_token and secret_getter:
-            raw_token = secret_getter("DEMANDCAST_STREAM_AUTH_TOKEN")
+            val = secret_getter("DEMANDCAST_STREAM_AUTH_TOKEN") or secret_getter("DEMANDCAST_STREAM_API_KEY")
+            raw_token = val.strip() if isinstance(val, str) and val.strip() else None
         if not raw_token:
-            raw_token = os.environ.get("DEMANDCAST_STREAM_AUTH_TOKEN") or os.environ.get("DEMANDCAST_STREAM_API_KEY")
+            env_token = os.environ.get("DEMANDCAST_STREAM_AUTH_TOKEN") or os.environ.get("DEMANDCAST_STREAM_API_KEY")
+            raw_token = env_token.strip() if isinstance(env_token, str) and env_token.strip() else None
 
         raw_timeout = timeout_seconds
         if raw_timeout is None and secret_getter:
@@ -326,6 +336,7 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
         self.allow_insecure_http = allow_insecure_http
         self.endpoint_url = raw_endpoint
         self._auth_token = raw_token
+        self._api_key = raw_token if api_key else None
         self.auth_failures_count = 0
         self.endpoint_valid, self.endpoint_error = self._validate_endpoint(raw_endpoint)
 
@@ -333,28 +344,48 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
         """Validate endpoint URL schema and prevent arbitrary protocol injection."""
         if not url:
             return False, "Endpoint URL is not configured"
-        # Support HTTPS and explicit local/mock test endpoints
-        is_https = url.startswith("https://")
-        is_allowed_local = self.allow_insecure_http and (
-            url.startswith("http://localhost")
-            or url.startswith("http://127.0.0.1")
-            or url.startswith("http://testserver")
-            or url.startswith("http://mock-retail-feed.internal")
-            or url.startswith("https://mock-retail-feed.internal")
-        )
-        if not (is_https or is_allowed_local):
-            if url.startswith("http://"):
-                return False, "Insecure HTTP protocol is disallowed for prospective feeds. Endpoint must use HTTPS."
-            return False, f"Unsupported URL scheme in endpoint: '{url}'. Only HTTPS is permitted."
-        return True, None
+
+        try:
+            parsed = urlparse(url)
+        except Exception as exc:
+            return False, f"Malformed endpoint URL: {str(exc)}"
+
+        scheme = (parsed.scheme or "").lower()
+        if scheme == "https":
+            if not parsed.netloc:
+                return False, f"Invalid HTTPS URL: missing hostname in '{self._mask_url(url)}'"
+            return True, None
+
+        if scheme == "http":
+            is_prod_env = os.environ.get("DEMANDCAST_ENV", "").lower() in ("prod", "production")
+            if is_prod_env:
+                return False, "Insecure HTTP protocol is strictly prohibited in production environment."
+
+            # Loopback addresses only when allow_insecure_http is explicitly enabled for isolated tests
+            hostname = (parsed.hostname or "").lower()
+            is_loopback = hostname in ("localhost", "127.0.0.1", "::1", "testserver")
+            if self.allow_insecure_http and is_loopback:
+                return True, None
+
+            return (
+                False,
+                "Insecure HTTP protocol is disallowed for remote prospective feeds. "
+                "Remote endpoints must use HTTPS. (Flag --allow-insecure-http is strictly restricted to loopback testing).",
+            )
+
+        return False, f"Unsupported URL scheme in endpoint: '{scheme}://'. Only HTTPS is permitted."
 
     def _mask_url(self, url: str | None) -> str | None:
-        """Mask URL parameters and userinfo for secure logging and telemetry."""
+        """Mask URL parameters, query strings, and user credentials for secure logging and telemetry."""
         if not url:
             return None
         try:
             parsed = urlparse(url)
-            return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            host = parsed.hostname or ""
+            if parsed.port:
+                host = f"{host}:{parsed.port}"
+            path = parsed.path or ""
+            return f"{parsed.scheme}://{host}{path}"
         except Exception:
             return "https://***"
 
@@ -622,10 +653,19 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
         sanitized = str(message)
         if self._auth_token and len(self._auth_token) > 0:
             sanitized = sanitized.replace(self._auth_token, "[REDACTED_SECRET]")
-        if self.endpoint_url and "?" in self.endpoint_url:
+        if getattr(self, "_api_key", None) and len(self._api_key) > 0:
+            sanitized = sanitized.replace(self._api_key, "[REDACTED_SECRET]")
+        if self.endpoint_url:
+            parsed = urlparse(self.endpoint_url)
+            if parsed.password:
+                sanitized = sanitized.replace(parsed.password, "[REDACTED_PASSWORD]")
             masked = self._mask_url(self.endpoint_url)
             if masked:
                 sanitized = sanitized.replace(self.endpoint_url, masked)
+        # Redact any basic auth user:pass patterns in URLs
+        sanitized = re.sub(r"://([^:/@]+):([^/@]+)@", r"://\1:[REDACTED_PASSWORD]@", sanitized)
+        # Redact query params like ?api_key=... or &token=...
+        sanitized = re.sub(r"([?&](?:api_key|token|secret|auth|key)=)[^&\s]+", r"\1[REDACTED_SECRET]", sanitized)
         return sanitized
 
     def pull_remote_batch(
@@ -660,7 +700,7 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
         headers = {
             "Authorization": f"Bearer {self._auth_token}",
             "Accept": "application/json",
-            "User-Agent": "DemandCast-ShadowPilot/v2.2.7",
+            "User-Agent": "DemandCast-ShadowPilot/v2.2.8",
         }
 
         session = http_session or requests.Session()
@@ -829,7 +869,7 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
             headers = {
                 "Authorization": f"Bearer {self._auth_token}",
                 "Accept": "application/json",
-                "User-Agent": "DemandCast-ShadowPilot/v2.2.7",
+                "User-Agent": "DemandCast-ShadowPilot/v2.2.8",
             }
             try:
                 resp = session.get(self.endpoint_url, headers=headers, timeout=self.timeout_seconds)

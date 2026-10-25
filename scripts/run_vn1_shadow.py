@@ -71,6 +71,21 @@ def cmd_forecast(args: argparse.Namespace) -> int:
 
     logger.info(f"Using input snapshot: {snapshot_path}")
 
+    # Guard: Prospective live execution strictly requires passing all activation gates
+    if args.mode == "prospective_live":
+        pilot = ShadowPilotConfig()
+        is_ready, gate_reasons = pilot.validate_activation_readiness(store=store)
+        if not is_ready:
+            print("\n" + "=" * 88)
+            print("DEMANDCAST v2.2.8 SHADOW ACTIVATION GATE: EXECUTION BLOCKED")
+            print("=" * 88)
+            print("Prospective live shadow mode cannot be activated because activation gates failed:")
+            for r in gate_reasons:
+                print(f"  - {r}")
+            print("\nTo inspect full diagnostic status, run: python scripts/run_vn1_shadow.py preflight")
+            print("=" * 88 + "\n")
+            return 1
+
     # Load snapshot
     if snapshot_path.suffix == ".parquet":
         df = pd.read_parquet(snapshot_path)
@@ -334,7 +349,11 @@ def cmd_preflight(args: argparse.Namespace) -> int:
     )
 
     pilot = ShadowPilotConfig()
-    is_activation_ready, activation_reasons = pilot.validate_activation_readiness(adapter)
+    gates_eval = pilot.evaluate_activation_gates(
+        adapter=adapter, store=store, sample_payload=sample_payload, preflight_result=res
+    )
+    is_activation_ready = gates_eval["all_gates_passed"]
+    activation_reasons = gates_eval["reasons"]
 
     if args.json:
         out = {
@@ -345,6 +364,7 @@ def cmd_preflight(args: argparse.Namespace) -> int:
                 "is_active": pilot.is_active,
                 "provider_status": pilot.provider_status,
                 "activation_ready": is_activation_ready,
+                "activation_gates": gates_eval["gates"],
                 "activation_reasons": activation_reasons,
                 "active_production_model": pilot.active_production_model,
                 "promotion_policy": pilot.promotion_policy,
@@ -354,7 +374,7 @@ def cmd_preflight(args: argparse.Namespace) -> int:
         return 0 if res.status == "READY" else 1
 
     print("\n" + "=" * 88)
-    print("DEMANDCAST v2.2.7 SHADOW PILOT PREFLIGHT & OPERATOR READINESS CHECK")
+    print("DEMANDCAST v2.2.8 SHADOW PILOT PREFLIGHT & OPERATOR READINESS CHECK")
     print("=" * 88)
     print(f"Overall Preflight Status:      {res.status}")
     print(f"Provider Identifier:           {res.provider_id}")
@@ -384,13 +404,17 @@ def cmd_preflight(args: argparse.Namespace) -> int:
     print(f"   Store Connection:           {'PASSED' if res.persistence_ready else 'FAILED'}")
     print(f"   Database Path:              {db_path}")
     print()
-    print("6. Governance & Pilot Activation Safeguards:")
+    print("6. Activation Gates & Governance Safeguards:")
     print(f"   Pilot Active State:         is_active={pilot.is_active} (Governance Lock)")
     print(f"   Active Production Model:    {pilot.active_production_model} (Pinned v1.0.0)")
     print(f"   Promotion Policy:           {pilot.promotion_policy} (Zero auto-promotion)")
     print(f"   Candidate C Role:           {pilot.challenger_c_model} (Experimental)")
     print(f"   Candidate D Role:           {pilot.challenger_d_model} (Experimental)")
-    print(f"   Pilot Activation Ready:     {is_activation_ready}")
+    print(f"   All Gates Passed:           {is_activation_ready}")
+    print("   Gate Breakdown:")
+    for g_name, g_val in gates_eval["gates"].items():
+        status_tag = "PASSED" if g_val else "FAILED"
+        print(f"     - {g_name:36s}: [{status_tag}]")
     print("-" * 88)
     print("Diagnostic Reasons:")
     for r in res.reasons:
@@ -408,7 +432,7 @@ def cmd_preflight(args: argparse.Namespace) -> int:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="DemandCast v2.2.7 Production-Safe Shadow Pipeline.")
+    parser = argparse.ArgumentParser(description="DemandCast v2.2.8 Production-Safe Shadow Pipeline.")
     subparsers = parser.add_subparsers(dest="command", required=True, help="Shadow subcommands")
 
     # 0. Preflight

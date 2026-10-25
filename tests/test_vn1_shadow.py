@@ -504,7 +504,7 @@ def test_19_shadow_pilot_activation_readiness_guard():
     """Verify ShadowPilotConfig safety guards prevent unconfigured pilot activation."""
     # 1. Default pilot is hard-inactive and unconfigured
     pilot = ShadowPilotConfig()
-    assert pilot.version == "v2.2.7"
+    assert pilot.version == "v2.2.8"
     assert pilot.is_active is False
     assert pilot.provider_status == "NOT_CONFIGURED"
 
@@ -525,6 +525,6 @@ def test_19_shadow_pilot_activation_readiness_guard():
         endpoint_url="https://mock-retail-feed.internal/stream",
         auth_token="valid_token",
     )
-    ready_valid, reasons_valid = pilot_forced.validate_activation_readiness(healthy_adapter)
+    ready_valid, reasons_valid = pilot_forced.validate_activation_readiness(healthy_adapter, skip_network=True)
     assert ready_valid is True
     assert len(reasons_valid) == 0

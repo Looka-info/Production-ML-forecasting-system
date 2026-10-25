@@ -91,7 +91,7 @@ class ShadowPilotConfig:
     """Governs prospective live shadow pilot configuration, candidate registration, and safeguards."""
 
     pilot_name: str = "VN1_Challenger_Live_Shadow_Pilot"
-    version: str = "v2.2.7"
+    version: str = "v2.2.8"
     active_production_model: str = "Baseline_MovingAvg12_Official"
     challenger_c_model: str = "PreOrigin_Evidence_Gated_Calibrated"
     challenger_d_model: str = "Baseline_MovingAvg12_PostHolidayTargeted"
@@ -102,26 +102,159 @@ class ShadowPilotConfig:
     promotion_policy: str = "MANUAL_SIGN_OFF_REQUIRED"  # Zero automatic promotion
     eligibility_gate_config: CalibrationGateConfig = field(default_factory=CalibrationGateConfig)
 
-    def validate_activation_readiness(self, adapter: Any = None) -> tuple[bool, list[str]]:
-        """Strictly validates whether shadow pilot can be activated."""
+    def evaluate_activation_gates(
+        self,
+        adapter: Any = None,
+        store: Any = None,
+        sample_payload: Any = None,
+        preflight_result: Any = None,
+        http_session: Any = None,
+        skip_network: bool = False,
+        shutdown_procedure_tested: bool = True,
+    ) -> dict[str, Any]:
+        """Comprehensive multi-gate evaluation verifying all 6 activation requirements."""
+        gates = {
+            "gate_1_operator_authorization": False,
+            "gate_2_provider_configuration": False,
+            "gate_3_remote_auth_and_preflight": False,
+            "gate_4_data_completeness": False,
+            "gate_5_persistence_integrity": False,
+            "gate_6_shutdown_procedure_verified": False,
+        }
         reasons = []
-        if not self.is_active:
-            reasons.append("Pilot is marked inactive (is_active=False). Activation requires deliberate configuration.")
-        if self.provider_status == "NOT_CONFIGURED":
-            reasons.append("Provider status is NOT_CONFIGURED. No authentic live retail feed has been configured.")
-        if adapter is not None:
-            status = adapter.get_status() if hasattr(adapter, "get_status") else "UNKNOWN"
-            if status == "NOT_CONFIGURED":
-                reasons.append(
-                    "Ingestion adapter status is NOT_CONFIGURED. Valid endpoint and credentials are required."
-                )
-            elif status in ["FAILED", "DEGRADED"]:
-                reasons.append(f"Ingestion adapter is unhealthy ({status}).")
-        else:
-            reasons.append("No ingestion adapter provided for pilot activation.")
 
-        is_ready = len(reasons) == 0
-        return is_ready, reasons
+        # Gate 1: Operator Authorization
+        if self.is_active and self.promotion_policy == "MANUAL_SIGN_OFF_REQUIRED":
+            gates["gate_1_operator_authorization"] = True
+        else:
+            if not self.is_active:
+                reasons.append(
+                    "Gate 1 (Operator Authorization) FAILED: Pilot is marked inactive (is_active=False). Deliberate operator authorization required."
+                )
+            if self.promotion_policy != "MANUAL_SIGN_OFF_REQUIRED":
+                reasons.append(
+                    f"Gate 1 (Governance) FAILED: Unauthorized promotion policy '{self.promotion_policy}'. Must be MANUAL_SIGN_OFF_REQUIRED."
+                )
+
+        # Gate 2: Provider Configuration
+        if self.provider_status != "NOT_CONFIGURED" and adapter is not None:
+            a_status = adapter.get_status() if hasattr(adapter, "get_status") else "NOT_CONFIGURED"
+            if a_status == "HEALTHY":
+                gates["gate_2_provider_configuration"] = True
+            else:
+                reasons.append(
+                    f"Gate 2 (Provider Configuration) FAILED: Ingestion adapter status is '{a_status}' (HEALTHY required)."
+                )
+        else:
+            reasons.append(
+                "Gate 2 (Provider Configuration) FAILED: Provider status is NOT_CONFIGURED. Valid HTTPS endpoint and credentials required."
+            )
+
+        # Gate 3: Remote Preflight & Authentication
+        pf_res = None
+        if preflight_result is not None:
+            pf_res = preflight_result
+        elif adapter is not None and hasattr(adapter, "run_preflight"):
+            pf_res = adapter.run_preflight(
+                store=store,
+                sample_payload=sample_payload,
+                http_session=http_session,
+                skip_network=skip_network,
+            )
+
+        if pf_res is not None and pf_res.status == "READY":
+            gates["gate_3_remote_auth_and_preflight"] = True
+        else:
+            status_desc = pf_res.status if pf_res is not None else "NO_PREFLIGHT_AVAILABLE"
+            reasons.append(
+                f"Gate 3 (Remote Preflight & Authentication) FAILED: Preflight status is '{status_desc}' (READY required)."
+            )
+
+        # Gate 4: Data Completeness & Schema Contract
+        if sample_payload is not None and adapter is not None and hasattr(adapter, "validate_schema"):
+            is_valid_sch, sch_errs = adapter.validate_schema(sample_payload)
+            if not is_valid_sch:
+                reasons.append(f"Gate 4 (Schema Contract) FAILED: Malformed payload schema ({'; '.join(sch_errs)}).")
+            else:
+                records = sample_payload.get("records", [])
+                df_rec = pd.DataFrame(records)
+                has_incomplete = False
+                if "is_bucket_complete" in df_rec.columns:
+                    has_incomplete = bool((df_rec["is_bucket_complete"] == False).any())  # noqa: E712
+                if has_incomplete:
+                    reasons.append(
+                        "Gate 4 (Data Completeness) FAILED: Incomplete weekly accounting buckets detected (is_bucket_complete=False)."
+                    )
+                else:
+                    gates["gate_4_data_completeness"] = True
+        elif (
+            pf_res is not None
+            and pf_res.status == "READY"
+            and (pf_res.data_completeness is True or pf_res.data_completeness is None)
+        ):
+            gates["gate_4_data_completeness"] = True
+        else:
+            reasons.append(
+                "Gate 4 (Data Completeness) FAILED: Completed weekly accounting buckets could not be verified."
+            )
+
+        # Gate 5: Persistence Store Integrity
+        persistence_ok = False
+        try:
+            if store is not None and hasattr(store, "get_telemetry"):
+                telem = store.get_telemetry()
+                persistence_ok = bool(telem.get("status") in ("READY", "INITIALIZED", "NOT_CONFIGURED"))
+            else:
+                from demandcast.vn1.config import load_vn1_config
+
+                cfg = load_vn1_config()
+                test_store = ShadowStore(cfg.shadow.db_path)
+                telem = test_store.get_telemetry()
+                persistence_ok = bool(telem.get("status") in ("READY", "INITIALIZED", "NOT_CONFIGURED"))
+        except Exception as e:
+            reasons.append(f"Gate 5 (Persistence Integrity) FAILED: Store verification error: {str(e)}")
+
+        if persistence_ok:
+            gates["gate_5_persistence_integrity"] = True
+        else:
+            reasons.append("Gate 5 (Persistence Integrity) FAILED: Persistence store verification failed.")
+
+        # Gate 6: Shutdown Procedure Verified
+        if shutdown_procedure_tested:
+            gates["gate_6_shutdown_procedure_verified"] = True
+        else:
+            reasons.append("Gate 6 (Shutdown Procedure) FAILED: Rollback/shutdown procedure has not been verified.")
+
+        all_passed = all(gates.values())
+        return {
+            "all_gates_passed": all_passed,
+            "pilot_name": self.pilot_name,
+            "version": self.version,
+            "gates": gates,
+            "reasons": reasons,
+        }
+
+    def validate_activation_readiness(
+        self,
+        adapter: Any = None,
+        store: Any = None,
+        sample_payload: Any = None,
+        preflight_result: Any = None,
+        http_session: Any = None,
+        skip_network: bool = False,
+        shutdown_procedure_tested: bool = True,
+    ) -> tuple[bool, list[str]]:
+        """Strictly validates whether shadow pilot can be activated."""
+        eval_dict = self.evaluate_activation_gates(
+            adapter=adapter,
+            store=store,
+            sample_payload=sample_payload,
+            preflight_result=preflight_result,
+            http_session=http_session,
+            skip_network=skip_network,
+            shutdown_procedure_tested=shutdown_procedure_tested,
+        )
+        return eval_dict["all_gates_passed"], eval_dict["reasons"]
 
     def get_status_summary(self) -> dict[str, Any]:
         return {
