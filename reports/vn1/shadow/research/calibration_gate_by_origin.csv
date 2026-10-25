@@ -1,0 +1,5 @@
+origin_date,origin_label,origin_category,series_count,eligible_series_count,ineligible_fallback_count,cand_a_prod_vn1,cand_b_global_vn1,cand_c_gated_vn1,cand_d_client_eb_vn1,cand_c_delta_vs_prod,cand_b_delta_vs_prod,cand_d_delta_vs_prod
+2022-01-03,Post-Holiday Q1 2022,post_holiday,250,48,202,0.5309,0.6289,0.5255,0.54,-0.0054,0.098,0.0091
+2022-07-04,Ordinary Mid-Year Q3 2022,ordinary,250,54,196,0.5176,0.5176,0.5176,0.5176,0.0,0.0,0.0
+2023-01-02,Post-Holiday Q1 2023,post_holiday,250,46,204,0.4562,0.5843,0.3912,0.4365,-0.065,0.1281,-0.0197
+2023-04-03,Ordinary Spring Q2 2023,ordinary,250,45,205,0.3609,0.3609,0.3609,0.3609,0.0,0.0,0.0

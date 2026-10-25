@@ -1,0 +1,350 @@
+{
+  "50_series_diagnostic": {
+    "series_count": 50,
+    "total_forecast_actual_pairs": 2600,
+    "expected_pairs_formula": "50 series x 13 steps x 4 origins = 2600",
+    "is_sample_count_exact": true,
+    "pooled_production": {
+      "vn1_score": 0.3415,
+      "wape": 0.3209,
+      "relative_bias": 0.0206,
+      "mae": 354.8862
+    },
+    "pooled_candidate_d_global": {
+      "vn1_score": 0.3193,
+      "wape": 0.3188,
+      "relative_bias": -0.0005,
+      "mae": 352.5454,
+      "delta_vn1_score": -0.0222
+    },
+    "pooled_candidate_d_client_eb": {
+      "vn1_score": 0.3297,
+      "wape": 0.3117,
+      "relative_bias": 0.018,
+      "mae": 344.738,
+      "delta_vn1_score": -0.0118
+    },
+    "by_origin": [
+      {
+        "origin_date": "2022-01-03",
+        "origin_label": "Post-Holiday Q1 2022",
+        "sample_count": 650,
+        "production": {
+          "vn1_score": 0.3616,
+          "wape": 0.3027,
+          "relative_bias": 0.0589
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.3166,
+          "wape": 0.2962,
+          "relative_bias": 0.0204,
+          "delta_vn1_score": -0.045
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.3366,
+          "wape": 0.2998,
+          "relative_bias": 0.0369,
+          "delta_vn1_score": -0.025
+        }
+      },
+      {
+        "origin_date": "2022-07-04",
+        "origin_label": "Ordinary Mid-Year Q3 2022",
+        "sample_count": 650,
+        "production": {
+          "vn1_score": 0.3393,
+          "wape": 0.339,
+          "relative_bias": 0.0003
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.3393,
+          "wape": 0.339,
+          "relative_bias": 0.0003,
+          "delta_vn1_score": 0.0
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.3393,
+          "wape": 0.339,
+          "relative_bias": 0.0003,
+          "delta_vn1_score": 0.0
+        }
+      },
+      {
+        "origin_date": "2023-01-02",
+        "origin_label": "Post-Holiday Q1 2023",
+        "sample_count": 650,
+        "production": {
+          "vn1_score": 0.4264,
+          "wape": 0.3706,
+          "relative_bias": 0.0559
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.3757,
+          "wape": 0.3682,
+          "relative_bias": 0.0075,
+          "delta_vn1_score": -0.0507
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.4026,
+          "wape": 0.3362,
+          "relative_bias": 0.0664,
+          "delta_vn1_score": -0.0238
+        }
+      },
+      {
+        "origin_date": "2023-04-03",
+        "origin_label": "Ordinary Spring Q2 2023",
+        "sample_count": 650,
+        "production": {
+          "vn1_score": 0.2999,
+          "wape": 0.272,
+          "relative_bias": -0.0279
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.2999,
+          "wape": 0.272,
+          "relative_bias": -0.0279,
+          "delta_vn1_score": 0.0
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.2999,
+          "wape": 0.272,
+          "relative_bias": -0.0279,
+          "delta_vn1_score": 0.0
+        }
+      }
+    ]
+  },
+  "250_series_stratified": {
+    "series_count": 250,
+    "total_forecast_actual_pairs": 13000,
+    "expected_pairs_formula": "250 series x 13 steps x 4 origins = 13000",
+    "is_sample_count_exact": true,
+    "pooled_production": {
+      "vn1_score": 0.4199,
+      "wape": 0.3701,
+      "relative_bias": -0.0498,
+      "mae": 17.3417
+    },
+    "pooled_candidate_d_global": {
+      "vn1_score": 0.4336,
+      "wape": 0.3712,
+      "relative_bias": -0.0624,
+      "mae": 17.3948,
+      "delta_vn1_score": 0.0137
+    },
+    "pooled_candidate_d_client_eb": {
+      "vn1_score": 0.417,
+      "wape": 0.3495,
+      "relative_bias": -0.0675,
+      "mae": 16.378,
+      "delta_vn1_score": -0.0029
+    },
+    "by_origin": [
+      {
+        "origin_date": "2022-01-03",
+        "origin_label": "Post-Holiday Q1 2022",
+        "sample_count": 3250,
+        "production": {
+          "vn1_score": 0.5309,
+          "wape": 0.4419,
+          "relative_bias": -0.089
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.6144,
+          "wape": 0.4526,
+          "relative_bias": -0.1618,
+          "delta_vn1_score": 0.0835
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.54,
+          "wape": 0.3904,
+          "relative_bias": -0.1497,
+          "delta_vn1_score": 0.0091
+        }
+      },
+      {
+        "origin_date": "2022-07-04",
+        "origin_label": "Ordinary Mid-Year Q3 2022",
+        "sample_count": 3250,
+        "production": {
+          "vn1_score": 0.5176,
+          "wape": 0.4376,
+          "relative_bias": 0.08
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.5176,
+          "wape": 0.4376,
+          "relative_bias": 0.08,
+          "delta_vn1_score": 0.0
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.5176,
+          "wape": 0.4376,
+          "relative_bias": 0.08,
+          "delta_vn1_score": 0.0
+        }
+      },
+      {
+        "origin_date": "2023-01-02",
+        "origin_label": "Post-Holiday Q1 2023",
+        "sample_count": 3250,
+        "production": {
+          "vn1_score": 0.4562,
+          "wape": 0.3703,
+          "relative_bias": -0.0859
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.4387,
+          "wape": 0.3654,
+          "relative_bias": -0.0733,
+          "delta_vn1_score": -0.0175
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.4365,
+          "wape": 0.3314,
+          "relative_bias": -0.1051,
+          "delta_vn1_score": -0.0197
+        }
+      },
+      {
+        "origin_date": "2023-04-03",
+        "origin_label": "Ordinary Spring Q2 2023",
+        "sample_count": 3250,
+        "production": {
+          "vn1_score": 0.3609,
+          "wape": 0.2491,
+          "relative_bias": -0.1118
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.3609,
+          "wape": 0.2491,
+          "relative_bias": -0.1118,
+          "delta_vn1_score": 0.0
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.3609,
+          "wape": 0.2491,
+          "relative_bias": -0.1118,
+          "delta_vn1_score": 0.0
+        }
+      }
+    ]
+  },
+  "15053_series_full_catalog": {
+    "series_count": 15053,
+    "total_forecast_actual_pairs": 782756,
+    "expected_pairs_formula": "15053 series x 13 steps x 4 origins = 782756",
+    "is_sample_count_exact": true,
+    "pooled_production": {
+      "vn1_score": 0.569,
+      "wape": 0.5319,
+      "relative_bias": 0.0371,
+      "mae": 7.8048
+    },
+    "pooled_candidate_d_global": {
+      "vn1_score": 0.5463,
+      "wape": 0.5172,
+      "relative_bias": -0.0291,
+      "mae": 7.5887,
+      "delta_vn1_score": -0.0227
+    },
+    "pooled_candidate_d_client_eb": {
+      "vn1_score": 0.5108,
+      "wape": 0.5079,
+      "relative_bias": -0.0029,
+      "mae": 7.4531,
+      "delta_vn1_score": -0.0582
+    },
+    "by_origin": [
+      {
+        "origin_date": "2022-01-03",
+        "origin_label": "Post-Holiday Q1 2022",
+        "sample_count": 195689,
+        "production": {
+          "vn1_score": 0.6976,
+          "wape": 0.5515,
+          "relative_bias": 0.146
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.5241,
+          "wape": 0.5211,
+          "relative_bias": 0.003,
+          "delta_vn1_score": -0.1735
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.5549,
+          "wape": 0.5126,
+          "relative_bias": 0.0422,
+          "delta_vn1_score": -0.1427
+        }
+      },
+      {
+        "origin_date": "2022-07-04",
+        "origin_label": "Ordinary Mid-Year Q3 2022",
+        "sample_count": 195689,
+        "production": {
+          "vn1_score": 0.5183,
+          "wape": 0.4718,
+          "relative_bias": -0.0465
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.5183,
+          "wape": 0.4718,
+          "relative_bias": -0.0465,
+          "delta_vn1_score": 0.0
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.5183,
+          "wape": 0.4718,
+          "relative_bias": -0.0465,
+          "delta_vn1_score": 0.0
+        }
+      },
+      {
+        "origin_date": "2023-01-02",
+        "origin_label": "Post-Holiday Q1 2023",
+        "sample_count": 195689,
+        "production": {
+          "vn1_score": 0.7275,
+          "wape": 0.6356,
+          "relative_bias": 0.0918
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.6455,
+          "wape": 0.6053,
+          "relative_bias": -0.0402,
+          "delta_vn1_score": -0.082
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.6033,
+          "wape": 0.5784,
+          "relative_bias": 0.0248,
+          "delta_vn1_score": -0.1242
+        }
+      },
+      {
+        "origin_date": "2023-04-03",
+        "origin_label": "Ordinary Spring Q2 2023",
+        "sample_count": 195689,
+        "production": {
+          "vn1_score": 0.4922,
+          "wape": 0.4646,
+          "relative_bias": -0.0276
+        },
+        "candidate_d_global": {
+          "vn1_score": 0.4922,
+          "wape": 0.4646,
+          "relative_bias": -0.0276,
+          "delta_vn1_score": 0.0
+        },
+        "candidate_d_client_eb": {
+          "vn1_score": 0.4922,
+          "wape": 0.4646,
+          "relative_bias": -0.0276,
+          "delta_vn1_score": 0.0
+        }
+      }
+    ]
+  }
+}

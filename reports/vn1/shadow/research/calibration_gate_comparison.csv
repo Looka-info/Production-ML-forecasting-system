@@ -1,0 +1,5 @@
+candidate_name,vn1_score,delta_vs_prod,wape,relative_bias,mae,rmse,smape
+Candidate A (Production Baseline),0.4199,0.0,0.3701,-0.0498,17.3417,119.3745,80.9949
+Candidate B (Unconditional Global),0.4722,0.0523,0.382,-0.0902,17.9028,125.8151,81.2549
+Candidate C (Pre-Origin Gated),0.4029,-0.017,0.3515,-0.0513,16.4733,117.543,80.5413
+Candidate D (Unconditional Client EB),0.417,-0.0029,0.3495,-0.0675,16.378,118.469,80.835

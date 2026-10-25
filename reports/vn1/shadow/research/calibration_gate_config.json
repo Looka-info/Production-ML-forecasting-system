@@ -1,0 +1,13 @@
+{
+  "gate_name": "PreOriginEvidenceBasedGatingRule",
+  "version": "1.0.0",
+  "governing_principle": "Strictly pre-origin historical evaluation (zero lookahead / zero future leakage)",
+  "parameters": {
+    "min_trailing_12w_volume": 35.0,
+    "max_zero_demand_fraction": 0.5,
+    "require_holiday_surge_elevation": true,
+    "elevation_lookback_weeks": 26,
+    "fallback_behavior": "Neutral 1.0 (revert to Production Baseline)"
+  },
+  "description": "Series with sparse or low-volume demand suffer from baseline under-prediction; applying downward seasonal shrinkage multiplies negative bias and degrades accuracy. Candidate C applies post-holiday calibration only to series demonstrating sustained volume (>= 35 units in trailing 12 weeks), non-sparsity (<= 50% zero weeks), and holiday surge elevation (MA12 >= MA26)."
+}

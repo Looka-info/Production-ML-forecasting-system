@@ -1,5 +1,9 @@
 """DemandCast v2 — VN1 Retail Forecasting Module."""
 
+from demandcast.vn1.calibration_gate import (
+    CalibrationGateConfig,
+    PreOriginCalibrationGate,
+)
 from demandcast.vn1.config import VN1Config, load_vn1_config
 from demandcast.vn1.seasonal_calibration import (
     CalibratedForecaster,
@@ -20,6 +24,8 @@ from demandcast.vn1.time_contract import (
 __all__ = [
     "VN1Config",
     "load_vn1_config",
+    "CalibrationGateConfig",
+    "PreOriginCalibrationGate",
     "SeasonalCalibrationConfig",
     "SeasonalCalibrationEstimator",
     "CalibratedForecaster",
