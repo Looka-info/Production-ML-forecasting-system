@@ -22,9 +22,13 @@ from demandcast.api.schemas import (
     VN1ForecastItem,
     VN1ForecastRequest,
     VN1ForecastResponse,
+    VN1ShadowSummaryResponse,
+    VN1ShadowTelemetryResponse,
 )
 from demandcast.config import load_config
 from demandcast.forecasting import generate_forecast_response
+from demandcast.vn1.config import load_vn1_config
+from demandcast.vn1.shadow import ShadowEvaluator, ShadowStore
 
 logger = logging.getLogger(__name__)
 
@@ -358,3 +362,32 @@ def forecast_v2(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"error": "VN1ForecastGenerationFailed", "message": f"An internal error occurred: {e}"},
         )
+
+
+@router.get(
+    "/v2/shadow/telemetry",
+    response_model=VN1ShadowTelemetryResponse,
+    tags=["Shadow Inference (v2.2 - VN1)"],
+    summary="Get operational telemetry and status for VN1 shadow pipeline",
+)
+def shadow_telemetry() -> VN1ShadowTelemetryResponse:
+    """Returns shadow store health, run counts, and records awaiting delayed actuals."""
+    config = load_vn1_config()
+    store = ShadowStore(config.shadow.db_path)
+    data = store.get_telemetry()
+    return VN1ShadowTelemetryResponse(**data)
+
+
+@router.get(
+    "/v2/shadow/summary",
+    response_model=VN1ShadowSummaryResponse,
+    tags=["Shadow Inference (v2.2 - VN1)"],
+    summary="Get evaluation summary on reconciled shadow forecasts",
+)
+def shadow_summary(run_id: str | None = None) -> VN1ShadowSummaryResponse:
+    """Returns official VN1 comparative performance metrics strictly on matched actuals."""
+    config = load_vn1_config()
+    store = ShadowStore(config.shadow.db_path)
+    evaluator = ShadowEvaluator(store)
+    report = evaluator.evaluate_matched_forecasts(run_id=run_id)
+    return VN1ShadowSummaryResponse(**report)

@@ -73,3 +73,11 @@ governance:
   dataset_doi: "10.5281/zenodo.23265413"
   competition_url: "https://supchains.com/vn1-forecasting-competition/"
   stale_model_threshold_days: 90
+
+shadow:
+  enabled: true
+  db_path: "data/shadow/shadow_store.db"
+  reports_dir: "reports/vn1/shadow"
+  default_provider: "file_batch"
+  shrinkage_k: 100.0
+  min_history_required: 12

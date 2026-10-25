@@ -6,6 +6,12 @@ from demandcast.vn1.seasonal_calibration import (
     SeasonalCalibrationConfig,
     SeasonalCalibrationEstimator,
 )
+from demandcast.vn1.shadow import (
+    ShadowEvaluator,
+    ShadowForecastRecord,
+    ShadowStore,
+    VN1ShadowPipeline,
+)
 
 __all__ = [
     "VN1Config",
@@ -13,4 +19,8 @@ __all__ = [
     "SeasonalCalibrationConfig",
     "SeasonalCalibrationEstimator",
     "CalibratedForecaster",
+    "ShadowStore",
+    "VN1ShadowPipeline",
+    "ShadowEvaluator",
+    "ShadowForecastRecord",
 ]

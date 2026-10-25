@@ -93,6 +93,15 @@ class VN1GovernanceConfig(BaseModel):
     stale_model_threshold_days: int = 90
 
 
+class VN1ShadowConfig(BaseModel):
+    enabled: bool = True
+    db_path: str = "data/shadow/shadow_store.db"
+    reports_dir: str = "reports/vn1/shadow"
+    default_provider: str = "file_batch"
+    shrinkage_k: float = 100.0
+    min_history_required: int = 12
+
+
 class VN1Config(BaseModel):
     profile_name: str = "vn1"
     version: str = "1.0.0"
@@ -105,6 +114,7 @@ class VN1Config(BaseModel):
     tracking: VN1TrackingConfig = Field(default_factory=VN1TrackingConfig)
     registry: VN1RegistryConfig = Field(default_factory=VN1RegistryConfig)
     governance: VN1GovernanceConfig = Field(default_factory=VN1GovernanceConfig)
+    shadow: VN1ShadowConfig = Field(default_factory=VN1ShadowConfig)
 
 
 def load_vn1_config(config_path: Path | str | None = None) -> VN1Config:

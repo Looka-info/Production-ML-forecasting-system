@@ -209,3 +209,34 @@ class VN1ForecastResponse(BaseModel):
     horizon: int = Field(..., description="Number of weekly steps predicted.")
     forecasts: list[VN1ForecastItem] = Field(..., description="List of weekly predictions.")
     warnings: list[str] = Field(default_factory=list, description="Data quality or stale model warnings.")
+
+
+class VN1ShadowTelemetryResponse(BaseModel):
+    """Operational telemetry and health status of the shadow inference pipeline."""
+
+    status: str
+    database_path: str
+    total_runs: int
+    total_forecasts: int
+    matched_forecasts: int
+    awaiting_actuals_forecasts: int
+    total_actuals_ingested: int
+    last_run: dict[str, Any] | None = None
+    timestamp: str
+
+
+class VN1ShadowSummaryResponse(BaseModel):
+    """Evaluation summary on matched shadow forecasts."""
+
+    status: str
+    message: str | None = None
+    sample_count: int = 0
+    series_count: int = 0
+    target_weeks_count: int = 0
+    production_model: dict[str, Any] | None = None
+    candidate_d: dict[str, Any] | None = None
+    comparison_delta: dict[str, Any] | None = None
+    by_horizon: list[dict[str, Any]] | None = None
+    post_holiday_segment: dict[str, Any] | None = None
+    ordinary_segment: dict[str, Any] | None = None
+    governance_note: str | None = None

@@ -1,0 +1,198 @@
+{
+  "status": "EVALUATED",
+  "sample_count": 650,
+  "series_count": 50,
+  "target_weeks_count": 13,
+  "production_model": {
+    "model_identifier": "production_v1.0.0",
+    "metrics": {
+      "vn1_score": 0.4264,
+      "wape": 0.3706,
+      "mae": 405.5518,
+      "rmse": 783.831,
+      "smape": 34.9111,
+      "bias": 61.1364,
+      "relative_bias": 0.0559
+    }
+  },
+  "candidate_d": {
+    "model_identifier": "candidate_d_v2.1-candidate_d",
+    "metrics": {
+      "vn1_score": 0.357,
+      "wape": 0.3121,
+      "mae": 341.6112,
+      "rmse": 700.1719,
+      "smape": 31.7433,
+      "bias": 49.0806,
+      "relative_bias": 0.0448
+    }
+  },
+  "comparison_delta": {
+    "delta_vn1_score": -0.0694,
+    "delta_wape": -0.0585,
+    "delta_relative_bias": -0.0111,
+    "interpretation": "Candidate D improved over Production"
+  },
+  "by_horizon": [
+    {
+      "horizon_step": 1,
+      "sample_count": 50,
+      "production_vn1_score": 0.7538,
+      "candidate_vn1_score": 0.6586,
+      "delta_vn1_score": -0.0952,
+      "production_wape": 0.4419,
+      "candidate_wape": 0.3615,
+      "production_bias": 0.312,
+      "candidate_bias": 0.2971
+    },
+    {
+      "horizon_step": 2,
+      "sample_count": 50,
+      "production_vn1_score": 0.4042,
+      "candidate_vn1_score": 0.34,
+      "delta_vn1_score": -0.0642,
+      "production_wape": 0.2847,
+      "candidate_wape": 0.2332,
+      "production_bias": 0.1195,
+      "candidate_bias": 0.1068
+    },
+    {
+      "horizon_step": 3,
+      "sample_count": 50,
+      "production_vn1_score": 0.3787,
+      "candidate_vn1_score": 0.3322,
+      "delta_vn1_score": -0.0465,
+      "production_wape": 0.296,
+      "candidate_wape": 0.2617,
+      "production_bias": 0.0827,
+      "candidate_bias": 0.0705
+    },
+    {
+      "horizon_step": 4,
+      "sample_count": 50,
+      "production_vn1_score": 0.4009,
+      "candidate_vn1_score": 0.3306,
+      "delta_vn1_score": -0.0703,
+      "production_wape": 0.3556,
+      "candidate_wape": 0.2971,
+      "production_bias": 0.0453,
+      "candidate_bias": 0.0335
+    },
+    {
+      "horizon_step": 5,
+      "sample_count": 50,
+      "production_vn1_score": 0.4891,
+      "candidate_vn1_score": 0.4439,
+      "delta_vn1_score": -0.0452,
+      "production_wape": 0.4021,
+      "candidate_wape": 0.3466,
+      "production_bias": -0.087,
+      "candidate_bias": -0.0973
+    },
+    {
+      "horizon_step": 6,
+      "sample_count": 50,
+      "production_vn1_score": 0.5793,
+      "candidate_vn1_score": 0.4975,
+      "delta_vn1_score": -0.0818,
+      "production_wape": 0.4136,
+      "candidate_wape": 0.345,
+      "production_bias": 0.1657,
+      "candidate_bias": 0.1525
+    },
+    {
+      "horizon_step": 7,
+      "sample_count": 50,
+      "production_vn1_score": 0.3491,
+      "candidate_vn1_score": 0.2824,
+      "delta_vn1_score": -0.0667,
+      "production_wape": 0.2886,
+      "candidate_wape": 0.2338,
+      "production_bias": 0.0605,
+      "candidate_bias": 0.0485
+    },
+    {
+      "horizon_step": 8,
+      "sample_count": 50,
+      "production_vn1_score": 0.4215,
+      "candidate_vn1_score": 0.3095,
+      "delta_vn1_score": -0.112,
+      "production_wape": 0.3762,
+      "candidate_wape": 0.2761,
+      "production_bias": 0.0453,
+      "candidate_bias": 0.0335
+    },
+    {
+      "horizon_step": 9,
+      "sample_count": 50,
+      "production_vn1_score": 0.6211,
+      "candidate_vn1_score": 0.5894,
+      "delta_vn1_score": -0.0317,
+      "production_wape": 0.4799,
+      "candidate_wape": 0.4385,
+      "production_bias": -0.1412,
+      "candidate_bias": -0.1509
+    },
+    {
+      "horizon_step": 10,
+      "sample_count": 50,
+      "production_vn1_score": 0.5187,
+      "candidate_vn1_score": 0.4003,
+      "delta_vn1_score": -0.1184,
+      "production_wape": 0.3821,
+      "candidate_wape": 0.2766,
+      "production_bias": 0.1365,
+      "candidate_bias": 0.1237
+    },
+    {
+      "horizon_step": 11,
+      "sample_count": 50,
+      "production_vn1_score": 0.3765,
+      "candidate_vn1_score": 0.297,
+      "delta_vn1_score": -0.0795,
+      "production_wape": 0.3291,
+      "candidate_wape": 0.2615,
+      "production_bias": 0.0473,
+      "candidate_bias": 0.0355
+    },
+    {
+      "horizon_step": 12,
+      "sample_count": 50,
+      "production_vn1_score": 0.3944,
+      "candidate_vn1_score": 0.33,
+      "delta_vn1_score": -0.0644,
+      "production_wape": 0.3713,
+      "candidate_wape": 0.3184,
+      "production_bias": 0.0231,
+      "candidate_bias": 0.0116
+    },
+    {
+      "horizon_step": 13,
+      "sample_count": 50,
+      "production_vn1_score": 0.4339,
+      "candidate_vn1_score": 0.4339,
+      "delta_vn1_score": 0.0,
+      "production_wape": 0.3782,
+      "candidate_wape": 0.3782,
+      "production_bias": 0.0557,
+      "candidate_bias": 0.0557
+    }
+  ],
+  "post_holiday_segment": {
+    "sample_count": 600,
+    "production_vn1_score": 0.4258,
+    "candidate_vn1_score": 0.3506,
+    "delta_vn1_score": -0.0752,
+    "production_bias": 0.0559,
+    "candidate_bias": 0.0439
+  },
+  "ordinary_segment": {
+    "sample_count": 50,
+    "production_vn1_score": 0.4339,
+    "candidate_vn1_score": 0.4339,
+    "delta_vn1_score": 0.0,
+    "production_bias": 0.0557,
+    "candidate_bias": 0.0557
+  },
+  "governance_note": "Shadow metrics represent prospective observability only. Candidate D is an experimental candidate and is NOT automatically promoted."
+}

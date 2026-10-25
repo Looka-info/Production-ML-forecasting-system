@@ -6,7 +6,7 @@
 [![MLflow](https://img.shields.io/badge/MLflow-2.10+-orange.svg)](https://mlflow.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 [![Code Style: Ruff](https://img.shields.io/badge/Code%20Style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
-[![Tests: 86 Passed](https://img.shields.io/badge/Tests-86%20Passed%20(0%20warnings)-brightgreen.svg)](tests/)
+[![Tests: 100 Passed](https://img.shields.io/badge/Tests-100%20Passed%20(0%20warnings)-brightgreen.svg)](tests/)
 
 **DemandCast** is a complete, production-grade retail demand forecasting and multi-profile model serving system developed as an advanced Machine Learning Engineering capstone. It takes weekly retail demand forecasting through the entire end-to-end ML lifecycle: dataset ingestion and provenance tracking, auditable data cleaning, training-only product selection, leakage-free feature engineering, chronological backtesting, MLflow experiment tracking, immutable release versioning, multi-profile FastAPI serving, Docker containerization, post-forecast quality monitoring, and automated rollback workflows.
 
@@ -14,6 +14,7 @@ DemandCast supports two production profiles:
 1. **DemandCast v1 (UCI Online Retail II Profile)**: 4-week forward forecasting on UK e-commerce giftware transactions across 15 high-volume catalog SKUs, promoted moving-average baseline under audited operational override.
 2. **DemandCast v2 (VN1 Retail Forecasting Profile)**: 13-week forward multi-step forecasting across 15,053 product–warehouse series from 46 e-commerce vendors (July 2020 – April 2024), evaluated under the official VN1 competition metric with price-aware LightGBM and moving-average benchmarks.
 3. **DemandCast v2.1 (Post-Holiday Seasonal Calibration Research)**: Post-holiday calibration layer investigating calendar-aware adjustments and empirical Bayes shrinkage on moving-average baselines across historical rolling origins.
+4. **DemandCast v2.2 (Production-Safe Shadow Forecasting Pipeline)**: Production-style shadow-inference pipeline running active production v1.0.0 and experimental Candidate D on identical input snapshots, idempotent SQLite persistence, delayed actuals reconciliation, failure isolation, and official VN1 comparative reporting.
 
 Repository: **[https://github.com/Looka-info/Production-ML-forecasting-system](https://github.com/Looka-info/Production-ML-forecasting-system)**
 
@@ -192,6 +193,101 @@ Evaluated across 4 historical Phase 0 rolling origins (Post-Holiday: `2022-01-03
 
 ##### 13-Week Horizon Error Dynamics
 ![Horizon Error Dynamics](reports/vn1/figures/forecast_errors_by_horizon.png)
+
+### 8. DemandCast v2.2 — Production-Safe Shadow Forecasting Pipeline
+
+DemandCast v2.2 introduces an enterprise-grade, production-safe **Shadow Forecasting and Observability Pipeline** for the VN1 profile. It executes the active production model (`Baseline_MovingAvg12_Official v1.0.0`) and experimental Candidate D (`Baseline_MovingAvg12_PostHolidayTargeted v2.1-candidate_d`) concurrently against the exact same point-in-time input snapshot, persists predictions idempotently, isolates production from candidate failures, and computes comparative evaluation metrics only after delayed actuals arrive.
+
+```mermaid
+flowchart TD
+    subgraph Input Ingestion & Validation
+        A["Versioned Input Snapshot<br/>(CSV / Parquet)"] --> B["SHA-256 Snapshot Hashing & Validation<br/>(Monday week-start grid)"]
+        B --> C["Point-in-Time Cutoff Enforcement<br/>(history <= origin_date)"]
+    end
+
+    subgraph Failure-Isolated Shadow Runner
+        C --> D["Production Path<br/>(Active v1.0.0: 12w MA)"]
+        C --> E["Candidate D Path<br/>(v2.1 Experimental: Post-Holiday Calibrated)"]
+        D -. Error Isolated .-> F["Production Forecast Record"]
+        E -. Error Isolated .-> G["Candidate D Forecast Record"]
+    end
+
+    subgraph Idempotent Persistence & Delayed Reconciliation
+        F --> H[("SQLite Shadow Store<br/>(shadow_store.db)")]
+        G --> H
+        I["Delayed Ground-Truth Actuals<br/>(Weekly observations)"] --> J["Schema Validation & Audit"]
+        J --> K["Delayed Actuals Reconciliation<br/>(Joins on series_id & target_week)"]
+        K --> H
+    end
+
+    subgraph Observability & Governance
+        H --> L["Shadow Evaluator<br/>(Official VN1 score, WAPE, Bias)"]
+        L --> M["Horizon & Segment Comparative Reports<br/>(reports/vn1/shadow/)"]
+        H --> N["REST Telemetry Endpoints<br/>(/v2/shadow/telemetry, /v2/shadow/summary)"]
+    end
+```
+
+#### A. Non-Negotiable Governance Guarantees
+
+1. **Active Release Pointer Intact**: The active production model pointer (`models/profiles/vn1/current.json`) remains strictly set to `v1.0.0` (`Baseline_MovingAvg12_Official`).
+2. **Experimental Candidate Designation**: Candidate D is explicitly versioned as `v2.1-candidate_d` with `is_candidate = True`. It is never promoted automatically based on shadow run results.
+3. **Failure Isolation**: Inference for Production and Candidate D executes in separate exception boundaries. A candidate crash, timeout, or mathematical failure can never abort production forecasts or corrupt production responses.
+4. **Leakage Prevention**: Point-in-time boundaries are enforced; data rows dated past `origin_date` are rejected or stripped before reaching either model. Calibration factor estimation uses only completed transitions prior to `origin_date`.
+5. **Data Snooping Ban**: Phase 2 data is never used to tune or optimize candidate parameters.
+6. **Zero Synthetic Hallucinations**: When no input provider or snapshot file is present, the pipeline truthfully reports `NOT_CONFIGURED` rather than fabricating simulated transactions.
+
+#### B. Data Contracts & Idempotent Persistence
+
+Shadow forecasts are stored in an ACID-compliant SQLite database (`data/shadow/shadow_store.db`) under an enforced compound unique constraint:
+
+$$\text{UNIQUE}(\text{snapshot\_hash}, \text{origin\_date}, \text{target\_week}, \text{series\_id}, \text{model\_identifier})$$
+
+- **Idempotency**: Re-executing shadow inference on the same input snapshot skips existing records without duplicate generation.
+- **Forecast Immutability**: Predicted demand values (`predicted_sales`, `raw_predicted_sales`, `calibration_factor`) are strictly immutable once written. Delayed actuals are ingested into a separate `shadow_actuals` table and joined via reconciliation.
+- **Conflict Safeguards**: Conflicting actual values arriving for an already reconciled forecast are rejected and flagged as `CONFLICT_REJECTED` rather than silently overwriting historical audit trails.
+
+#### C. Operational CLI Commands
+
+The pipeline is operated via the command-line interface in `scripts/run_vn1_shadow.py`:
+
+```bash
+# 1. Run shadow forecasting on an input snapshot (clearly labeled mode)
+python scripts/run_vn1_shadow.py forecast --snapshot-path data/vn1/raw/Phase_0_Sales.csv --series-subset 250 --mode historical_replay
+
+# 2. Ingest delayed actuals when observed and reconcile against pending forecasts
+python scripts/run_vn1_shadow.py reconcile --actuals-path data/vn1/raw/Phase_0_Sales.csv --source historical_phase0_actuals
+
+# 3. Generate comparative evaluation report and save artifacts
+python scripts/run_vn1_shadow.py report --output-dir reports/vn1/shadow
+
+# 4. Display operational telemetry and pipeline health
+python scripts/run_vn1_shadow.py telemetry
+```
+
+#### D. REST Observability Endpoints
+
+Two read-only inspection endpoints are available:
+
+- `GET /v2/shadow/telemetry`: Returns pipeline readiness status (`NOT_CONFIGURED`, `READY`, `FAILED`), total shadow runs, total forecasts, count of forecasts awaiting actuals, and details of the most recent run.
+- `GET /v2/shadow/summary`: Returns official VN1 comparative metrics, WAPE, MAE, RMSE, relative bias, multi-horizon breakdowns, and post-holiday versus ordinary calendar segmentation strictly for matched observation pairs.
+
+#### E. Verified Comparative Shadow Performance (Matched Actuals Replay)
+
+Evaluating 650 matched observation pairs across 50 representative catalog series over a 13-week forecast horizon:
+
+| Evaluation Metric | Production (`v1.0.0`) | Candidate D (`v2.1-candidate_d`) | Delta (Candidate − Production) | Interpretation |
+| :--- | :--- | :--- | :--- | :--- |
+| **Official VN1 Score ↓** | 0.4264 | **0.3570** | **-0.0694** | Candidate D improved portfolio accuracy |
+| **WAPE ↓** | 0.3706 | **0.3121** | **-0.0585** | Volume error reduced by 5.85 percentage points |
+| **MAE ↓** | 405.55 | **341.61** | **-63.94** | Absolute units error lower across items |
+| **RMSE ↓** | 783.83 | **700.17** | **-83.66** | Outlier spikes dampened |
+| **Relative Bias** | +0.0559 | **+0.0448** | **-0.0111** | Post-holiday positive bias reduced |
+| **Post-Holiday VN1 Score ↓** | 0.4258 | **0.3506** | **-0.0752** | Substantial gain during post-Q4 drop ($n=600$) |
+| **Ordinary Calendar Score ↓** | 0.4339 | 0.4339 | **+0.0000** | Strict neutrality preserved ($n=50$) |
+
+> [!NOTE]
+> **Governance Transparency**:
+> Candidate D demonstrated a measured accuracy improvement on the post-holiday moving-average baseline during this replay. However, Candidate D does not beat the Naive benchmark across all conditions and remains an **experimental candidate**. Production promotion requires prospective live replenishment evaluation and executive review.
 
 ---
 
