@@ -35,6 +35,11 @@ VN1_FILES = {
         "expected_sha256": "d36f18dc0bd6799897c4b96935acef7526f867a3184db44fb458c0b7fcd07490",
         "expected_size": 962283,
     },
+    "Phase 2 - Sales.csv": {
+        "url": "https://raw.githubusercontent.com/SupChains/VN1/main/Phase%202%20-%20Sales.csv",
+        "expected_sha256": "ef5b998226495fdfc44ea4dcda8df9b45b1c76f6adb50441e2217ad3a623c6ac",
+        "expected_size": 1012437,
+    },
 }
 
 

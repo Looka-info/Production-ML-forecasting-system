@@ -1,0 +1,11 @@
+evaluation_scope,model_name,model_family,series_count,total_instances,vn1_score,wape,mae,rmse,relative_bias,official_reference,smape
+"Full_Competition_Benchmark (15,053 series)",Baseline_Naive,Last Known Value,15053,195689,0.50697,0.50134,8.3076,65.7167,-0.00563,0.506970 (SupChains published benchmark),
+"Full_Competition_Benchmark (15,053 series)",Baseline_MovingAvg12_Official,Trailing Mean (12w),15053,195689,0.804585,0.609692,10.1031,67.4304,0.194893,0.804585 (SupChains published benchmark),
+"Full_Competition_Benchmark (15,053 series)",Baseline_MovingAvg4_DemandCast,Trailing Mean (4w),15053,195689,0.79364,0.648496,10.7461,75.2668,0.145144,DemandCast fast-reacting baseline,
+"Full_Competition_Benchmark (15,053 series)",Baseline_SeasonalNaive52,Seasonal Lag (52w),15053,195689,0.785154,0.776151,12.8615,85.4357,-0.009003,Annual persistence baseline,
+Development_Subset (250 series),Baseline_MovingAvg12_Official,Trailing Mean,250,3250,0.625,0.4955,207.6823,468.1191,0.1295,N/A (Subset),51.1238
+Development_Subset (250 series),Baseline_MovingAvg4_DemandCast,Trailing Mean,250,3250,0.5154,0.4907,205.6733,511.7154,0.0247,N/A (Subset),53.9579
+Development_Subset (250 series),Baseline_Naive,Persistence,250,3250,0.4689,0.3946,165.3877,459.2709,-0.0743,N/A (Subset),47.9583
+Development_Subset (250 series),Baseline_SeasonalNaive52,Persistence,250,3250,0.7786,0.6369,266.9363,587.9311,0.1418,N/A (Subset),62.4989
+Development_Subset (250 series),LightGBM_NoPrice,Gradient Boosted Trees,250,3250,0.4328,0.4258,178.4753,440.9501,-0.007,N/A (Subset),57.6142
+Development_Subset (250 series),LightGBM_PriceAware,Gradient Boosted Trees,250,3250,0.4427,0.4245,177.9201,426.0372,0.0182,N/A (Subset),57.2015

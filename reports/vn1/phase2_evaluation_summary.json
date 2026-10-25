@@ -1,0 +1,173 @@
+{
+  "evaluation_name": "DemandCast v2 VN1 Phase 2 Ground-Truth Holdout Evaluation",
+  "evaluation_timestamp": "2026-10-25T14:33:05.389651+00:00",
+  "phase2_horizon": {
+    "origin_date": "2024-01-01",
+    "start_date": "2024-01-08",
+    "end_date": "2024-04-01",
+    "weeks_count": 13
+  },
+  "active_production_release": {
+    "model_version": "v1.0.0",
+    "model_name": "Baseline_MovingAvg12_Official",
+    "checksum_sha256": "2e98277531f730db4d57b6e58bf7da2c62998e5341946da58ec202a9a65ab809",
+    "selection_basis": "Promoted strictly on Phase 1 validation results (origin 2023-10-02) prior to Phase 2 disclosure.",
+    "production_governance_policy": "Phase 2 outcomes serve as an immutable holdout evaluation. Production models are NEVER altered post-hoc based on test holdout results to avoid data snooping."
+  },
+  "price_feature_handling": {
+    "policy": "Origin-only price projection (no future price leakage)",
+    "description": "During recursive 13-week inference, price levels and price ratios known at origin (2024-01-01) are held constant forward across the horizon. No Phase 2 price information was accessed.",
+    "causality_caveat": "Predictive improvements from price features reflect historical correlational patterns and do not establish causal price elasticity."
+  },
+  "official_benchmark_reference_comparison": {
+    "description": "Full 15,053 series evaluated using exact official vn1_score.py formula",
+    "naive_benchmark_reproduced": {
+      "measured_score": 0.50697,
+      "official_published": 0.50697,
+      "relative_bias": -0.00563
+    },
+    "ma12_benchmark_reproduced": {
+      "measured_score": 0.804585,
+      "official_published": 0.804585,
+      "relative_bias": 0.194893
+    }
+  },
+  "results_summary": [
+    {
+      "evaluation_scope": "Full_Competition_Benchmark (15,053 series)",
+      "model_name": "Baseline_Naive",
+      "model_family": "Last Known Value",
+      "series_count": 15053,
+      "total_instances": 195689,
+      "vn1_score": 0.50697,
+      "wape": 0.50134,
+      "mae": 8.3076,
+      "rmse": 65.7167,
+      "relative_bias": -0.00563,
+      "official_reference": "0.506970 (SupChains published benchmark)"
+    },
+    {
+      "evaluation_scope": "Full_Competition_Benchmark (15,053 series)",
+      "model_name": "Baseline_MovingAvg12_Official",
+      "model_family": "Trailing Mean (12w)",
+      "series_count": 15053,
+      "total_instances": 195689,
+      "vn1_score": 0.804585,
+      "wape": 0.609692,
+      "mae": 10.1031,
+      "rmse": 67.4304,
+      "relative_bias": 0.194893,
+      "official_reference": "0.804585 (SupChains published benchmark)"
+    },
+    {
+      "evaluation_scope": "Full_Competition_Benchmark (15,053 series)",
+      "model_name": "Baseline_MovingAvg4_DemandCast",
+      "model_family": "Trailing Mean (4w)",
+      "series_count": 15053,
+      "total_instances": 195689,
+      "vn1_score": 0.79364,
+      "wape": 0.648496,
+      "mae": 10.7461,
+      "rmse": 75.2668,
+      "relative_bias": 0.145144,
+      "official_reference": "DemandCast fast-reacting baseline"
+    },
+    {
+      "evaluation_scope": "Full_Competition_Benchmark (15,053 series)",
+      "model_name": "Baseline_SeasonalNaive52",
+      "model_family": "Seasonal Lag (52w)",
+      "series_count": 15053,
+      "total_instances": 195689,
+      "vn1_score": 0.785154,
+      "wape": 0.776151,
+      "mae": 12.8615,
+      "rmse": 85.4357,
+      "relative_bias": -0.009003,
+      "official_reference": "Annual persistence baseline"
+    },
+    {
+      "evaluation_scope": "Development_Subset (250 series)",
+      "model_name": "Baseline_MovingAvg12_Official",
+      "model_family": "Trailing Mean",
+      "series_count": 250,
+      "total_instances": 3250,
+      "vn1_score": 0.625,
+      "wape": 0.4955,
+      "mae": 207.6823,
+      "rmse": 468.1191,
+      "smape": 51.1238,
+      "relative_bias": 0.1295,
+      "official_reference": "N/A (Subset)"
+    },
+    {
+      "evaluation_scope": "Development_Subset (250 series)",
+      "model_name": "Baseline_MovingAvg4_DemandCast",
+      "model_family": "Trailing Mean",
+      "series_count": 250,
+      "total_instances": 3250,
+      "vn1_score": 0.5154,
+      "wape": 0.4907,
+      "mae": 205.6733,
+      "rmse": 511.7154,
+      "smape": 53.9579,
+      "relative_bias": 0.0247,
+      "official_reference": "N/A (Subset)"
+    },
+    {
+      "evaluation_scope": "Development_Subset (250 series)",
+      "model_name": "Baseline_Naive",
+      "model_family": "Persistence",
+      "series_count": 250,
+      "total_instances": 3250,
+      "vn1_score": 0.4689,
+      "wape": 0.3946,
+      "mae": 165.3877,
+      "rmse": 459.2709,
+      "smape": 47.9583,
+      "relative_bias": -0.0743,
+      "official_reference": "N/A (Subset)"
+    },
+    {
+      "evaluation_scope": "Development_Subset (250 series)",
+      "model_name": "Baseline_SeasonalNaive52",
+      "model_family": "Persistence",
+      "series_count": 250,
+      "total_instances": 3250,
+      "vn1_score": 0.7786,
+      "wape": 0.6369,
+      "mae": 266.9363,
+      "rmse": 587.9311,
+      "smape": 62.4989,
+      "relative_bias": 0.1418,
+      "official_reference": "N/A (Subset)"
+    },
+    {
+      "evaluation_scope": "Development_Subset (250 series)",
+      "model_name": "LightGBM_NoPrice",
+      "model_family": "Gradient Boosted Trees",
+      "series_count": 250,
+      "total_instances": 3250,
+      "vn1_score": 0.4328,
+      "wape": 0.4258,
+      "mae": 178.4753,
+      "rmse": 440.9501,
+      "smape": 57.6142,
+      "relative_bias": -0.007,
+      "official_reference": "N/A (Subset)"
+    },
+    {
+      "evaluation_scope": "Development_Subset (250 series)",
+      "model_name": "LightGBM_PriceAware",
+      "model_family": "Gradient Boosted Trees",
+      "series_count": 250,
+      "total_instances": 3250,
+      "vn1_score": 0.4427,
+      "wape": 0.4245,
+      "mae": 177.9201,
+      "rmse": 426.0372,
+      "smape": 57.2015,
+      "relative_bias": 0.0182,
+      "official_reference": "N/A (Subset)"
+    }
+  ]
+}

@@ -4,7 +4,7 @@
   "organizers": "Nicolas Vandeput (SupChains), Flieber, DataSource.ai",
   "dataset_doi": "10.5281/zenodo.23265413",
   "competition_url": "https://supchains.com/vn1-forecasting-competition/",
-  "retrieved_at": "2026-10-25T13:33:05.752120+00:00",
+  "retrieved_at": "2026-10-25T14:28:55.593005+00:00",
   "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
   "scope": {
     "entity": "Product-Warehouse sales time-series across e-commerce vendors",
@@ -33,6 +33,11 @@
     "Phase 1 - Price.csv": {
       "sha256": "d36f18dc0bd6799897c4b96935acef7526f867a3184db44fb458c0b7fcd07490",
       "size_bytes": 962283,
+      "verified": true
+    },
+    "Phase 2 - Sales.csv": {
+      "sha256": "ef5b998226495fdfc44ea4dcda8df9b45b1c76f6adb50441e2217ad3a623c6ac",
+      "size_bytes": 1012437,
       "verified": true
     }
   }

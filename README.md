@@ -6,7 +6,7 @@
 [![MLflow](https://img.shields.io/badge/MLflow-2.10+-orange.svg)](https://mlflow.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 [![Code Style: Ruff](https://img.shields.io/badge/Code%20Style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
-[![Tests: 75 Passed](https://img.shields.io/badge/Tests-75%20Passed%20(0%20warnings)-brightgreen.svg)](tests/)
+[![Tests: 78 Passed](https://img.shields.io/badge/Tests-78%20Passed%20(0%20warnings)-brightgreen.svg)](tests/)
 
 **DemandCast** is a complete, production-grade retail demand forecasting and multi-profile model serving system developed as an advanced Machine Learning Engineering capstone. It takes weekly retail demand forecasting through the entire end-to-end ML lifecycle: dataset ingestion and provenance tracking, auditable data cleaning, training-only product selection, leakage-free feature engineering, chronological backtesting, MLflow experiment tracking, immutable release versioning, multi-profile FastAPI serving, Docker containerization, post-forecast quality monitoring, and automated rollback workflows.
 
@@ -82,9 +82,52 @@ Following strict ML engineering principles, model selection is conducted **stric
 #### Trajectory Comparison: Predictions vs. Actuals
 ![VN1 Forecast Comparison](reports/vn1/figures/forecast_comparison.png)
 
-### 6. Phase 2 Holdout Predictions (Leakage-Free Benchmark)
+### 6. Phase 2 Ground-Truth Holdout Evaluation
 
-Predictions for the 13-week Phase 2 evaluation period (`2024-01-08` to `2024-04-01`) were generated with origin strictly set to `2024-01-01`. In accordance with competition rules, only price data known at origin was utilized; no future prices or future sales were accessed. The complete predictions table is exported in `reports/vn1/phase2_test_results.csv`.
+Using the officially published competition holdout ground-truth (`Phase 2 - Sales.csv`, 15,053 series $\times$ 13 weeks; `2024-01-08` to `2024-04-01`), we conducted a strict, leakage-safe post-competition evaluation across both the **full 15,053-series competition benchmark** and the **250-series development subset**.
+
+All forecasts were generated strictly with forecast origin at `2024-01-01` (end of Phase 1), with zero Phase 2 information accessed. Future prices were projected flat from origin without future price leakage.
+
+#### A. Full 15,053-Series Official Benchmark Results (195,689 Observations)
+
+Evaluating the official competition baseline implementations across the entire catalog reproduces Nicolas Vandeput's published benchmark figures:
+
+| Model Candidate | Model Family | VN1 Score ↓ | WAPE ↓ | MAE ↓ | RMSE ↓ | Rel Bias | Official Published Benchmark |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`Baseline_Naive`** | Last Known Value | **0.5070** | **0.5013** | **8.31** | 65.72 | **-0.0056** | `0.506970` (Exact match) |
+| **`Baseline_SeasonalNaive52`** | Seasonal Lag (52w) | 0.7852 | 0.7762 | 12.86 | 85.44 | -0.0090 | Historical reference |
+| **`Baseline_MovingAvg4_DemandCast`** | Trailing Mean (4w) | 0.7936 | 0.6485 | 10.75 | 75.27 | +0.1451 | DemandCast fast baseline |
+| **`Baseline_MovingAvg12_Official`** | Trailing Mean (12w) | 0.8046 | 0.6097 | 10.10 | 67.43 | **+0.1949** | `0.804585` (Exact match) |
+
+#### B. 250-Series Development Subset Comparison (3,250 Observations)
+
+Evaluating all 6 candidate models on the 250-series development subset reveals how model dynamics shift between Q4 (Phase 1) and Q1 (Phase 2):
+
+| Model Candidate | Model Family | VN1 Score ↓ | WAPE ↓ | MAE ↓ | RMSE ↓ | sMAPE ↓ | Rel Bias | Production Role |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`LightGBM_NoPrice`** | Gradient Boosted Trees | **0.4328** | 0.4258 | 178.48 | 440.95 | 57.61% | **-0.0070** | Research Candidate |
+| **`LightGBM_PriceAware`** | Gradient Boosted Trees | 0.4427 | **0.4245** | **177.92** | **426.04** | 57.20% | +0.0182 | Research Candidate |
+| **`Baseline_Naive`** | Last Known Value | 0.4689 | 0.3946 | 165.39 | 459.27 | **47.96%** | -0.0743 | Baseline Benchmark |
+| **`Baseline_MovingAvg4_DemandCast`** | Trailing Mean (4w) | 0.5154 | 0.4907 | 205.67 | 511.72 | 53.96% | +0.0247 | Baseline Benchmark |
+| **`Baseline_MovingAvg12_Official`** | Trailing Mean (12w) | 0.6250 | 0.4955 | 207.68 | 468.12 | 51.12% | **+0.1295** | **Active Production (`v1.0.0`)** |
+| **`Baseline_SeasonalNaive52`** | Seasonal Lag (52w) | 0.7786 | 0.6369 | 266.94 | 587.93 | 62.50% | +0.1418 | Baseline Benchmark |
+
+#### C. Engineering Analysis: The Post-Q4 Holiday Demand Cliff
+
+1. **Why 12-Week Moving Average Degraded in Phase 2**:
+   In Phase 1 (Oct–Dec), the 12-week moving average won decisively (0.4325 score) because Q4 sales volume built steadily. However, in Phase 2 (Jan–Mar), the 12-week moving average computed on Phase 1 was anchored to the high peak of Black Friday, Cyber Monday, and holiday shopping. Projecting that holiday level flat across Q1 caused severe systematic over-forecasting (**+19.49% bias across the full dataset**, **+12.95% on the subset**).
+2. **Why Naive and LightGBM Handled Phase 2 Effectively**:
+   The Naive forecast used the single most recent week (`2024-01-01`), which already reflected the post-holiday dip, yielding near-zero bias (-0.56% on the full catalog). LightGBM, trained across multiple historical years, recognized that non-holiday quarters return to a lower baseline and avoided the holiday bias trap (-0.70% bias).
+3. **Strict ML Governance Commitment**:
+   In accordance with production ML engineering standards, **Phase 2 results are strictly for post-hoc holdout reporting and are NEVER used to retroactively alter the production release**. Release `v1.0.0` was legitimately promoted based on Phase 1 validation prior to Phase 2 disclosure. Changing models post-hoc on test holdout data would constitute data snooping.
+
+#### D. Phase 2 Evaluation Figures
+
+##### Model Performance across Scope (Subset vs. Full Benchmark)
+![Phase 2 Model Comparison](reports/vn1/figures/phase2_model_comparison.png)
+
+##### Forecast Trajectories vs. Phase 2 Ground-Truth Actuals
+![Phase 2 Forecast Examples](reports/vn1/figures/phase2_forecast_examples.png)
 
 ---
 
@@ -471,11 +514,14 @@ python scripts/verify_api_live.py
 
 #### VN1 Profile (DemandCast v2 Upgrade)
 ```powershell
-# 1. Download and verify official VN1 challenge dataset files
+# 1. Download and verify official VN1 challenge dataset files (Phases 0, 1, 2)
 python scripts/download_vn1_data.py
 
 # 2. Run chronological Phase 1 validation across 6 models, log to MLflow, and package/promote v1.0.0
 python scripts/train_vn1_pipeline.py --version v1.0.0 --series-sample 250
+
+# 3. Execute final Phase 2 ground-truth holdout evaluation against published actuals
+python scripts/evaluate_vn1_phase2.py
 ```
 
 ### 10.3 Run Automated Tests & Code Quality
@@ -484,7 +530,7 @@ python scripts/train_vn1_pipeline.py --version v1.0.0 --series-sample 250
 ruff check .
 ruff format --check .
 
-# Run complete test suite (75 unit and integration tests under strict zero-warning policy)
+# Run complete test suite (78 unit and integration tests under strict zero-warning policy)
 pytest -v
 ```
 
@@ -565,8 +611,9 @@ demandcast/
 │   ├── rollback_model.py               # Safe rollback to prior release
 │   ├── evaluate_forecasts.py           # Offline reconciliation & drift evaluation
 │   ├── verify_api_live.py              # End-to-end live API validation test
-│   ├── download_vn1_data.py            # Download & verify VN1 dataset files
-│   └── train_vn1_pipeline.py           # Full VN1 backtesting, MLflow logging & promotion
+│   ├── download_vn1_data.py            # Download & verify VN1 dataset files (Phases 0, 1, 2)
+│   ├── train_vn1_pipeline.py           # Full VN1 backtesting, MLflow logging & promotion
+│   └── evaluate_vn1_phase2.py          # Final Phase 2 ground-truth holdout evaluation
 ├── reports/
 │   ├── model_comparison.csv            # UCI benchmark comparison table
 │   ├── backtest_results.csv            # UCI validation forecasts vs actuals
@@ -574,16 +621,20 @@ demandcast/
 │   ├── data_quality_report.json        # UCI cleaning and exclusion counts
 │   ├── figures/                        # UCI high-resolution evaluation graphs
 │   └── vn1/                            # VN1 Reports & Artifacts
-│       ├── model_comparison.csv        # 6-candidate VN1 benchmark comparison
+│       ├── model_comparison.csv        # 6-candidate VN1 Phase 1 benchmark comparison
 │       ├── validation_results.csv      # Phase 1 validation forecast table (3,250 rows)
 │       ├── metrics_by_horizon.csv      # Error growth across weeks 1 to 13
 │       ├── metrics_by_series.csv       # Granular errors per product-warehouse series
-│       ├── phase2_test_results.csv     # 13-week holdout predictions (blind benchmark)
+│       ├── phase2_test_results.csv     # 13-week holdout predictions evaluated against actuals
+│       ├── phase2_model_comparison.csv # Final Phase 2 comparison (Full benchmark & Subset)
+│       ├── phase2_evaluation_summary.json # Comprehensive Phase 2 governance audit record
 │       ├── data_quality_report.json    # VN1 intermittency & zero-sales statistics
 │       └── figures/                    # VN1 high-resolution evaluation graphs
-│           ├── model_comparison_bar.png# Primary comparison (VN1 Score, WAPE, Bias)
+│           ├── model_comparison_bar.png# Phase 1 comparison (VN1 Score, WAPE, Bias)
 │           ├── metrics_by_horizon.png  # Error propagation over 13 weeks
-│           └── forecast_comparison.png # Prediction trajectories vs actuals
+│           ├── forecast_comparison.png # Phase 1 prediction trajectories vs actuals
+│           ├── phase2_model_comparison.png # Phase 2 holdout scores across models
+│           └── phase2_forecast_examples.png# Phase 2 predictions vs ground truth actuals
 ├── models/
 │   ├── releases/                       # UCI model releases (v1.0.0)
 │   ├── current.json                    # UCI active promoted release pointer
@@ -607,16 +658,14 @@ demandcast/
 │   ├── test_vn1_baselines.py           # Tests for VN1 Naive, 12w MA, 4w MA
 │   ├── test_vn1_features.py            # Tests for VN1 feature engineering & leakage prevention
 │   ├── test_vn1_registry.py            # Tests for VN1 model registry, packaging & quality gate
-│   └── test_vn1_api.py                 # Tests for /v2/forecast, dual /ready & /metadata
+│   ├── test_vn1_api.py                 # Tests for /v2/forecast, dual /ready & /metadata
+│   └── test_vn1_phase2.py              # Tests for Phase 2 ground-truth evaluation & official scoring
 ├── docs/
 │   ├── architecture.md                 # System architecture & sequence diagrams
 │   ├── methodology.md                  # Forecasting problem formulation & backtest design
 │   ├── monitoring.md                   # Operational monitoring & rollback protocol
 │   └── model_card.md                   # Comprehensive model governance card
 └── .github/
-    └── workflows/
-        └── ci.yml                      # GitHub Actions CI workflow (lint, test, build)
-```
     └── workflows/
         └── ci.yml                      # GitHub Actions CI workflow (lint, test, build)
 ```
