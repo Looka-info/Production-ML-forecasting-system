@@ -34,7 +34,9 @@
       "The physical file 'data/vn1/raw/Phase 2 - Sales.csv' has never been altered, regenerated, or replaced.",
       "Its true, verified SHA-256 hash is and has always been 'ef5b998226495fdfc44ea4dcda8df9b45b1c76f6adb50441e2217ad3a623c6ac'.",
       "Root Cause: '955ea478...' originated as an erroneous assistant transcription error in the v2.2.4 conversational summary prose.",
-      "Integrity Conclusion: The Phase 2 holdout ground-truth file is intact, authentic, uncompromised, and strictly sealed."
+      "Historical Access Disclosure: Phase 2 actual sales were previously downloaded, inspected, and evaluated in the DemandCast v2 milestone (Commit a06260d, 'reports/vn1/phase2_test_results.csv') to reproduce official competition holdout benchmarks.",
+      "Current Research Exclusion: In all subsequent seasonal calibration research and shadow gating evaluations (milestones v2.1 through v2.2.6), Phase 2 actuals have been strictly excluded from model fitting, candidate parameter selection, gate thresholds, and eligibility decisions.",
+      "Integrity Conclusion: The Phase 2 holdout ground-truth file is intact, authentic, and unchanged on disk with SHA-256 ef5b9982..."
     ],
     "verdict": "RESOLVED_CONVERSATIONAL_TRANSCRIPTION_ERROR_IMMUTABLE_FILE_INTACT"
   }

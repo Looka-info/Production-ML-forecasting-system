@@ -147,3 +147,99 @@ def test_stream_adapter_successful_ingestion():
     assert res.series_count == 2
     assert res.snapshot_hash is not None
     assert adapter.total_ingested_batches == 1
+
+
+def test_stream_adapter_secret_redaction_and_masking():
+    adapter = ProspectiveStreamIngestionAdapter(
+        endpoint_url="https://mock-retail-feed.internal/stream?token=abc",
+        auth_token="SUPER_SECRET_RETAIL_KEY_XYZ",
+    )
+    # Check repr does not contain the secret token
+    adapter_repr = repr(adapter)
+    assert "SUPER_SECRET_RETAIL_KEY_XYZ" not in adapter_repr
+    assert "auth_configured=True" in adapter_repr
+
+    # Check telemetry masks endpoint and does not leak token
+    telem = adapter.get_telemetry()
+    assert "SUPER_SECRET_RETAIL_KEY_XYZ" not in str(telem)
+    assert telem["auth_token_configured"] is True
+    assert telem["endpoint_masked"] == "https://mock-retail-feed.internal/stream"
+
+
+def test_stream_adapter_missing_credentials_fails_closed(monkeypatch):
+    monkeypatch.delenv("DEMANDCAST_STREAM_ENDPOINT_URL", raising=False)
+    monkeypatch.delenv("DEMANDCAST_STREAM_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("DEMANDCAST_STREAM_API_KEY", raising=False)
+
+    adapter = ProspectiveStreamIngestionAdapter()
+    assert adapter.get_status() == "NOT_CONFIGURED"
+
+    valid, err = adapter.validate_authentication("some_token")
+    assert valid is False
+    assert "NOT_CONFIGURED" in err
+
+    res_none = adapter.ingest(None)
+    assert res_none.status == "NOT_CONFIGURED"
+
+    # Attempting to authenticate against unconfigured adapter fails closed
+    payload = {
+        "schema_version": "v1.0",
+        "records": [{"series_id": "0_0_0", "week_start": "2023-01-02", "sales": 10.0, "is_bucket_complete": True}],
+    }
+    res_auth = adapter.ingest(payload, auth_token="some_token")
+    assert res_auth.status == "REJECTED_AUTHENTICATION_FAILURE"
+    assert "NOT_CONFIGURED" in res_auth.errors[0]
+
+
+def test_stream_adapter_authentication_failure_handling():
+    adapter = ProspectiveStreamIngestionAdapter(
+        endpoint_url="https://mock-retail-feed.internal/stream",
+        auth_token="CORRECT_TOKEN",
+    )
+    # 1. Direct validation with bad token
+    valid, err = adapter.validate_authentication(incoming_token="WRONG_TOKEN")
+    assert valid is False
+    assert "Authentication failed" in err
+    assert "CORRECT_TOKEN" not in err  # No secret leakage
+
+    # 2. Ingestion with bad auth header
+    payload = {
+        "schema_version": "v1.0",
+        "records": [{"series_id": "0_0_0", "week_start": "2023-01-02", "sales": 10.0, "is_bucket_complete": True}],
+    }
+    res = adapter.ingest(payload, auth_token="WRONG_TOKEN")
+    assert res.status == "REJECTED_AUTHENTICATION_FAILURE"
+    assert "Authentication failed" in res.errors[0]
+    assert "CORRECT_TOKEN" not in res.errors[0]
+    assert adapter.auth_failures_count == 2
+
+
+def test_stream_adapter_insecure_http_rejection():
+    # Plain HTTP endpoint rejected by default
+    adapter = ProspectiveStreamIngestionAdapter(
+        endpoint_url="http://insecure-feed.internal/stream",
+        auth_token="test_token",
+    )
+    assert adapter.get_status() == "FAILED"
+
+    payload = {
+        "schema_version": "v1.0",
+        "records": [{"series_id": "0_0_0", "week_start": "2023-01-02", "sales": 10.0, "is_bucket_complete": True}],
+    }
+    res = adapter.ingest(payload)
+    assert res.status == "REJECTED_INVALID_ENDPOINT"
+    assert "Insecure HTTP protocol is disallowed" in res.errors[0]
+
+
+def test_stream_adapter_environment_variable_loading(monkeypatch):
+    monkeypatch.setenv("DEMANDCAST_STREAM_ENDPOINT_URL", "https://env-retail-feed.internal/stream")
+    monkeypatch.setenv("DEMANDCAST_STREAM_AUTH_TOKEN", "ENV_SECRET_TOKEN_999")
+    monkeypatch.setenv("DEMANDCAST_STREAM_TIMEOUT_SECONDS", "25.0")
+
+    adapter = ProspectiveStreamIngestionAdapter()
+    assert adapter.get_status() == "HEALTHY"
+    assert adapter.timeout_seconds == 25.0
+    assert repr(adapter) is not None
+    assert "ENV_SECRET_TOKEN_999" not in repr(adapter)
+    valid, _ = adapter.validate_authentication("ENV_SECRET_TOKEN_999")
+    assert valid is True

@@ -25,6 +25,7 @@ from fastapi.testclient import TestClient
 
 from demandcast.api.main import app
 from demandcast.config import get_project_root
+from demandcast.vn1.ingestion import ProspectiveStreamIngestionAdapter
 from demandcast.vn1.metrics import compute_all_vn1_metrics
 from demandcast.vn1.shadow import (
     ShadowEvaluator,
@@ -465,3 +466,65 @@ def test_17_v225_audit_artifacts_and_discrepancy_reproduction():
     df_safety = pd.read_csv(safety_csv)
     assert "VOLUME_TIER" in df_safety["segment_dimension"].values
     assert "INTERMITTENCY_TIER" in df_safety["segment_dimension"].values
+
+
+def test_18_sparse_segment_accounting_parity_and_transition_trace():
+    """Verify v2.2.6 sparse segment accounting trace and dynamic fallback parity."""
+    root = get_project_root()
+    audit_dir = root / "reports" / "vn1" / "shadow" / "audit"
+
+    # 1. Verify trace CSV
+    trace_csv = audit_dir / "sparse_segment_accounting_trace.csv"
+    assert trace_csv.exists(), f"Missing trace file: {trace_csv}"
+    df_trace = pd.read_csv(trace_csv)
+    # Exactly 144 transitioning series x 13 horizons = 1872 rows
+    assert len(df_trace) == 1872
+    assert df_trace["series_id"].nunique() == 144
+
+    # All transitioning series originated in static Sparse tier (pre-2022 zero frac > 0.6666)
+    assert (df_trace["pre_2022_zero_fraction"] > 0.6666).all()
+    # All satisfied dynamic active criteria at 2023-01-02 (zero frac <= 0.50, vol >= 35.0, ma12 >= ma26)
+    assert (df_trace["origin_zero_fraction"] <= 0.50).all()
+    assert (df_trace["trailing_12w_volume"] >= 35.0).all()
+    assert (df_trace["trailing_12w_ma"] >= df_trace["trailing_26w_ma"]).all()
+
+    # 2. Verify v2.2.6 readiness report exists and contains factual gain ratio
+    report_md = audit_dir / "v2_2_6_readiness_report.md"
+    assert report_md.exists(), f"Missing report: {report_md}"
+    report_text = report_md.read_text(encoding="utf-8")
+    assert "73.02%" in report_text
+    assert (
+        "dynamic_sparse_max_prediction_difference: 0.0" in report_text
+        or "maximum prediction difference = **0.000000**" in report_text
+    )
+    assert "100.0000% identical" in report_text
+
+
+def test_19_shadow_pilot_activation_readiness_guard():
+    """Verify ShadowPilotConfig safety guards prevent unconfigured pilot activation."""
+    # 1. Default pilot is hard-inactive and unconfigured
+    pilot = ShadowPilotConfig()
+    assert pilot.version == "v2.2.6"
+    assert pilot.is_active is False
+    assert pilot.provider_status == "NOT_CONFIGURED"
+
+    unconfigured_adapter = ProspectiveStreamIngestionAdapter()
+    ready, reasons = pilot.validate_activation_readiness(unconfigured_adapter)
+    assert ready is False
+    assert any("is_active=False" in r for r in reasons)
+    assert any("NOT_CONFIGURED" in r for r in reasons)
+
+    # 2. Even if is_active is manually forced True, unconfigured adapter blocks activation
+    pilot_forced = ShadowPilotConfig(is_active=True, provider_status="HEALTHY")
+    ready_forced, reasons_forced = pilot_forced.validate_activation_readiness(unconfigured_adapter)
+    assert ready_forced is False
+    assert any("NOT_CONFIGURED" in r for r in reasons_forced)
+
+    # 3. Healthy adapter with active flag passes readiness check
+    healthy_adapter = ProspectiveStreamIngestionAdapter(
+        endpoint_url="https://mock-retail-feed.internal/stream",
+        auth_token="valid_token",
+    )
+    ready_valid, reasons_valid = pilot_forced.validate_activation_readiness(healthy_adapter)
+    assert ready_valid is True
+    assert len(reasons_valid) == 0

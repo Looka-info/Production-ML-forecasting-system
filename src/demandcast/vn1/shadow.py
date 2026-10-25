@@ -91,7 +91,7 @@ class ShadowPilotConfig:
     """Governs prospective live shadow pilot configuration, candidate registration, and safeguards."""
 
     pilot_name: str = "VN1_Challenger_Live_Shadow_Pilot"
-    version: str = "v2.2.5"
+    version: str = "v2.2.6"
     active_production_model: str = "Baseline_MovingAvg12_Official"
     challenger_c_model: str = "PreOrigin_Evidence_Gated_Calibrated"
     challenger_d_model: str = "Baseline_MovingAvg12_PostHolidayTargeted"
@@ -101,6 +101,27 @@ class ShadowPilotConfig:
     max_segment_degradation: float = 0.0100  # Max tolerated tier degradation (+1.0% VN1 score)
     promotion_policy: str = "MANUAL_SIGN_OFF_REQUIRED"  # Zero automatic promotion
     eligibility_gate_config: CalibrationGateConfig = field(default_factory=CalibrationGateConfig)
+
+    def validate_activation_readiness(self, adapter: Any = None) -> tuple[bool, list[str]]:
+        """Strictly validates whether shadow pilot can be activated."""
+        reasons = []
+        if not self.is_active:
+            reasons.append("Pilot is marked inactive (is_active=False). Activation requires deliberate configuration.")
+        if self.provider_status == "NOT_CONFIGURED":
+            reasons.append("Provider status is NOT_CONFIGURED. No authentic live retail feed has been configured.")
+        if adapter is not None:
+            status = adapter.get_status() if hasattr(adapter, "get_status") else "UNKNOWN"
+            if status == "NOT_CONFIGURED":
+                reasons.append(
+                    "Ingestion adapter status is NOT_CONFIGURED. Valid endpoint and credentials are required."
+                )
+            elif status in ["FAILED", "DEGRADED"]:
+                reasons.append(f"Ingestion adapter is unhealthy ({status}).")
+        else:
+            reasons.append("No ingestion adapter provided for pilot activation.")
+
+        is_ready = len(reasons) == 0
+        return is_ready, reasons
 
     def get_status_summary(self) -> dict[str, Any]:
         return {

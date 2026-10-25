@@ -14,12 +14,15 @@ Core Guarantees:
 """
 
 import hashlib
+import hmac
 import logging
+import os
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Callable, Literal
+from urllib.parse import urlparse
 
 import pandas as pd
 
@@ -60,6 +63,7 @@ class BaseShadowIngestionAdapter(ABC):
         self.last_ingestion_time: str | None = None
         self.total_ingested_batches: int = 0
         self.total_rejected_batches: int = 0
+        self.total_records_ingested: int = 0
         self.last_error: str | None = None
 
     @abstractmethod
@@ -216,6 +220,7 @@ class FileBatchIngestionAdapter(BaseShadowIngestionAdapter):
 
         self.last_ingestion_time = as_of
         self.total_ingested_batches += 1
+        self.total_records_ingested += record_count
         self.last_error = None
 
         return IngestionResult(
@@ -241,7 +246,8 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
     """Generic adapter for streaming or prospective HTTP/JSON live feeds.
 
     Truthful reporting: Status is strictly 'NOT_CONFIGURED' unless an authenticated,
-    active upstream stream endpoint is explicitly provided in configuration.
+    active upstream stream endpoint is explicitly provided via environment variables,
+    secret manager, or configuration. Raw credentials are never exposed in logs or telemetry.
     """
 
     def __init__(
@@ -250,15 +256,138 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
         schema_version: str = "v1.0",
         endpoint_url: str | None = None,
         auth_token: str | None = None,
+        timeout_seconds: float | None = None,
+        secret_getter: Callable[[str], str | None] | None = None,
+        allow_insecure_http: bool = False,
     ):
         super().__init__(provider_id=provider_id, schema_version=schema_version)
-        self.endpoint_url = endpoint_url
-        self.auth_token = auth_token
+        self.secret_getter = secret_getter
+
+        # Load credentials with preference: explicit argument -> secret_getter -> os.environ
+        raw_endpoint = endpoint_url
+        if not raw_endpoint and secret_getter:
+            raw_endpoint = secret_getter("DEMANDCAST_STREAM_ENDPOINT_URL")
+        if not raw_endpoint:
+            raw_endpoint = os.environ.get("DEMANDCAST_STREAM_ENDPOINT_URL")
+
+        raw_token = auth_token
+        if not raw_token and secret_getter:
+            raw_token = secret_getter("DEMANDCAST_STREAM_AUTH_TOKEN")
+        if not raw_token:
+            raw_token = os.environ.get("DEMANDCAST_STREAM_AUTH_TOKEN") or os.environ.get("DEMANDCAST_STREAM_API_KEY")
+
+        raw_timeout = timeout_seconds
+        if raw_timeout is None and secret_getter:
+            t_val = secret_getter("DEMANDCAST_STREAM_TIMEOUT_SECONDS")
+            raw_timeout = float(t_val) if t_val else None
+        if raw_timeout is None:
+            t_env = os.environ.get("DEMANDCAST_STREAM_TIMEOUT_SECONDS")
+            raw_timeout = float(t_env) if t_env else 10.0
+
+        self.timeout_seconds = float(raw_timeout)
+        self.allow_insecure_http = allow_insecure_http
+        self.endpoint_url = raw_endpoint
+        self._auth_token = raw_token
+        self.auth_failures_count = 0
+        self.endpoint_valid, self.endpoint_error = self._validate_endpoint(raw_endpoint)
+
+    def _validate_endpoint(self, url: str | None) -> tuple[bool, str | None]:
+        """Validate endpoint URL schema and prevent arbitrary protocol injection."""
+        if not url:
+            return False, "Endpoint URL is not configured"
+        # Support HTTPS and explicit local/mock test endpoints
+        is_https = url.startswith("https://")
+        is_allowed_local = self.allow_insecure_http and (
+            url.startswith("http://localhost")
+            or url.startswith("http://127.0.0.1")
+            or url.startswith("http://testserver")
+            or url.startswith("http://mock-retail-feed.internal")
+            or url.startswith("https://mock-retail-feed.internal")
+        )
+        if not (is_https or is_allowed_local):
+            if url.startswith("http://"):
+                return False, "Insecure HTTP protocol is disallowed for prospective feeds. Endpoint must use HTTPS."
+            return False, f"Unsupported URL scheme in endpoint: '{url}'. Only HTTPS is permitted."
+        return True, None
+
+    def _mask_url(self, url: str | None) -> str | None:
+        """Mask URL parameters and userinfo for secure logging and telemetry."""
+        if not url:
+            return None
+        try:
+            parsed = urlparse(url)
+            return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        except Exception:
+            return "https://***"
+
+    @property
+    def auth_token(self) -> str | None:
+        """Expose auth_token for backward compatibility with existing tests."""
+        return self._auth_token
+
+    @auth_token.setter
+    def auth_token(self, value: str | None):
+        self._auth_token = value
 
     def get_status(self) -> ProviderStatus:
-        if not self.endpoint_url or not self.auth_token:
+        if not self.endpoint_url or not self._auth_token:
             return "NOT_CONFIGURED"
+        if not self.endpoint_valid:
+            return "FAILED"
         return "HEALTHY"
+
+    def validate_authentication(
+        self,
+        incoming_token: str | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> tuple[bool, str | None]:
+        """Verify incoming push/pull token against stored secret without leaking token in error."""
+        if not self._auth_token:
+            return False, "No auth_token configured on ingestion adapter (NOT_CONFIGURED)"
+
+        provided = incoming_token
+        if not provided and headers:
+            auth_hdr = headers.get("Authorization") or headers.get("authorization")
+            if auth_hdr and auth_hdr.startswith("Bearer "):
+                provided = auth_hdr.split("Bearer ", 1)[1].strip()
+            if not provided:
+                provided = headers.get("X-API-Key") or headers.get("x-api-key") or headers.get("X-Api-Key")
+
+        if not provided:
+            self.auth_failures_count += 1
+            return False, "Authentication failed: missing authentication token"
+
+        if not hmac.compare_digest(provided, self._auth_token):
+            self.auth_failures_count += 1
+            return False, "Authentication failed: invalid authentication token"
+
+        return True, None
+
+    def get_telemetry(self) -> dict[str, Any]:
+        """Actionable telemetry strictly excluding secrets."""
+        return {
+            "provider_id": self.provider_id,
+            "schema_version": self.schema_version,
+            "status": self.get_status(),
+            "endpoint_configured": bool(self.endpoint_url),
+            "endpoint_masked": self._mask_url(self.endpoint_url),
+            "auth_token_configured": bool(self._auth_token),
+            "timeout_seconds": self.timeout_seconds,
+            "total_ingested_batches": self.total_ingested_batches,
+            "total_rejected_batches": self.total_rejected_batches,
+            "total_records_ingested": self.total_records_ingested,
+            "auth_failures_count": self.auth_failures_count,
+            "last_error": self.last_error,
+            "is_bucket_complete_enforced": True,
+            "fail_closed": True,
+        }
+
+    def __repr__(self) -> str:
+        return (
+            f"<ProspectiveStreamIngestionAdapter provider_id='{self.provider_id}' "
+            f"status='{self.get_status()}' endpoint='{self._mask_url(self.endpoint_url)}' "
+            f"auth_configured={bool(self._auth_token)}>"
+        )
 
     def validate_schema(self, payload: Any) -> tuple[bool, list[str]]:
         errors = []
@@ -290,7 +419,13 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
 
         return len(errors) == 0, errors
 
-    def ingest(self, payload: Any, as_of_timestamp: str | None = None) -> IngestionResult:
+    def ingest(
+        self,
+        payload: Any,
+        as_of_timestamp: str | None = None,
+        auth_token: str | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> IngestionResult:
         as_of = as_of_timestamp or datetime.now(timezone.utc).isoformat()
 
         if self.get_status() == "NOT_CONFIGURED" and not payload:
@@ -301,6 +436,31 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
                 as_of_timestamp=as_of,
                 errors=["Prospective retail stream provider is NOT_CONFIGURED (no active live feed)."],
             )
+
+        if self.get_status() == "FAILED":
+            self.total_rejected_batches += 1
+            self.last_error = self.endpoint_error or "Invalid endpoint URL"
+            return IngestionResult(
+                status="REJECTED_INVALID_ENDPOINT",
+                provider_id=self.provider_id,
+                schema_version=self.schema_version,
+                as_of_timestamp=as_of,
+                errors=[self.endpoint_error or "Invalid endpoint URL configuration"],
+            )
+
+        # Enforce authentication verification if auth credentials or headers are supplied
+        if auth_token or headers:
+            is_authed, auth_err = self.validate_authentication(incoming_token=auth_token, headers=headers)
+            if not is_authed:
+                self.total_rejected_batches += 1
+                self.last_error = auth_err or "Authentication failed"
+                return IngestionResult(
+                    status="REJECTED_AUTHENTICATION_FAILURE",
+                    provider_id=self.provider_id,
+                    schema_version=self.schema_version,
+                    as_of_timestamp=as_of,
+                    errors=[auth_err or "Authentication failed"],
+                )
 
         is_valid, errors = self.validate_schema(payload)
         if not is_valid:
@@ -396,6 +556,7 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
 
         self.last_ingestion_time = as_of
         self.total_ingested_batches += 1
+        self.total_records_ingested += record_count
         self.last_error = None
 
         return IngestionResult(
