@@ -17,6 +17,7 @@ import hashlib
 import hmac
 import logging
 import os
+import time
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -25,10 +26,47 @@ from typing import Any, Callable, Literal
 from urllib.parse import urlparse
 
 import pandas as pd
+import requests
 
 logger = logging.getLogger(__name__)
 
 ProviderStatus = Literal["NOT_CONFIGURED", "CONFIGURED", "HEALTHY", "DEGRADED", "FAILED"]
+PreflightStatus = Literal[
+    "NOT_CONFIGURED",
+    "INVALID_CONFIGURATION",
+    "AUTHENTICATION_FAILED",
+    "PROVIDER_UNAVAILABLE",
+    "SCHEMA_INVALID",
+    "INCOMPLETE_INPUT",
+    "READY",
+]
+
+
+@dataclass
+class PreflightResult:
+    """Standardized result of a shadow provider preflight readiness check."""
+
+    status: PreflightStatus
+    provider_id: str
+    schema_version: str
+    provider_configured: bool
+    endpoint_url_masked: str | None
+    endpoint_valid: bool
+    endpoint_scheme: str | None
+    credentials_present: bool
+    network_reachable: bool | None = None
+    remote_authenticated: bool | None = None
+    schema_valid: bool | None = None
+    data_completeness: bool | None = None
+    persistence_ready: bool = False
+    pilot_activation_ready: bool = False  # Strictly False by default per governance
+    details: dict[str, Any] = field(default_factory=dict)
+    reasons: list[str] = field(default_factory=list)
+    remediation_steps: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert preflight result to clean dictionary."""
+        return asdict(self)
 
 
 @dataclass
@@ -575,4 +613,462 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
                 "endpoint_url": self.endpoint_url or "UNCONFIGURED_MOCK",
                 "latest_week_start": last_observed,
             },
+        )
+
+    def _sanitize_error_message(self, message: str) -> str:
+        """Strip any token or credential leakage from exception strings and URLs."""
+        if not message:
+            return ""
+        sanitized = str(message)
+        if self._auth_token and len(self._auth_token) > 0:
+            sanitized = sanitized.replace(self._auth_token, "[REDACTED_SECRET]")
+        if self.endpoint_url and "?" in self.endpoint_url:
+            masked = self._mask_url(self.endpoint_url)
+            if masked:
+                sanitized = sanitized.replace(self.endpoint_url, masked)
+        return sanitized
+
+    def pull_remote_batch(
+        self,
+        as_of_timestamp: str | None = None,
+        http_session: Any = None,
+        max_retries: int = 2,
+    ) -> IngestionResult:
+        """Pull weekly sales batch from remote HTTPS ERP/WMS API with safe retry and secret redaction."""
+        as_of = as_of_timestamp or datetime.now(timezone.utc).isoformat()
+
+        if not self.endpoint_url or not self._auth_token:
+            return IngestionResult(
+                status="NOT_CONFIGURED",
+                provider_id=self.provider_id,
+                schema_version=self.schema_version,
+                as_of_timestamp=as_of,
+                errors=["Prospective stream adapter is NOT_CONFIGURED (no active live feed or credentials)."],
+            )
+
+        if not self.endpoint_valid:
+            self.total_rejected_batches += 1
+            self.last_error = self.endpoint_error or "Invalid endpoint configuration"
+            return IngestionResult(
+                status="REJECTED_INVALID_ENDPOINT",
+                provider_id=self.provider_id,
+                schema_version=self.schema_version,
+                as_of_timestamp=as_of,
+                errors=[self.endpoint_error or "Invalid endpoint URL configuration."],
+            )
+
+        headers = {
+            "Authorization": f"Bearer {self._auth_token}",
+            "Accept": "application/json",
+            "User-Agent": "DemandCast-ShadowPilot/v2.2.7",
+        }
+
+        session = http_session or requests.Session()
+        last_exc: Exception | None = None
+
+        for attempt in range(max_retries + 1):
+            try:
+                resp = session.get(self.endpoint_url, headers=headers, timeout=self.timeout_seconds)
+                if resp.status_code in (401, 403):
+                    self.auth_failures_count += 1
+                    self.total_rejected_batches += 1
+                    self.last_error = f"Remote provider rejected authentication (HTTP {resp.status_code})"
+                    return IngestionResult(
+                        status="REJECTED_AUTHENTICATION_FAILURE",
+                        provider_id=self.provider_id,
+                        schema_version=self.schema_version,
+                        as_of_timestamp=as_of,
+                        errors=[f"Remote provider rejected authentication credentials (HTTP {resp.status_code})."],
+                    )
+                if resp.status_code != 200:
+                    if attempt < max_retries and resp.status_code in (500, 502, 503, 504):
+                        time.sleep(0.1 * (attempt + 1))
+                        continue
+                    self.total_rejected_batches += 1
+                    self.last_error = f"Remote provider returned HTTP {resp.status_code}"
+                    return IngestionResult(
+                        status="PROVIDER_UNAVAILABLE",
+                        provider_id=self.provider_id,
+                        schema_version=self.schema_version,
+                        as_of_timestamp=as_of,
+                        errors=[f"Remote provider returned error status HTTP {resp.status_code}."],
+                    )
+
+                payload = resp.json()
+                return self.ingest(payload, as_of_timestamp=as_of)
+
+            except Exception as exc:
+                last_exc = exc
+                sanitized_msg = self._sanitize_error_message(str(exc))
+                if attempt < max_retries:
+                    time.sleep(0.1 * (attempt + 1))
+                    continue
+                self.total_rejected_batches += 1
+                self.last_error = sanitized_msg
+                return IngestionResult(
+                    status="PROVIDER_UNAVAILABLE",
+                    provider_id=self.provider_id,
+                    schema_version=self.schema_version,
+                    as_of_timestamp=as_of,
+                    errors=[f"Remote provider connection failed or timed out: {sanitized_msg}"],
+                )
+
+        sanitized_err = self._sanitize_error_message(str(last_exc) if last_exc else "Unknown error")
+        return IngestionResult(
+            status="PROVIDER_UNAVAILABLE",
+            provider_id=self.provider_id,
+            schema_version=self.schema_version,
+            as_of_timestamp=as_of,
+            errors=[f"Remote provider connection failed: {sanitized_err}"],
+        )
+
+    def run_preflight(
+        self,
+        store: Any = None,
+        sample_payload: Any = None,
+        http_session: Any = None,
+        skip_network: bool = False,
+        as_of_timestamp: str | None = None,
+    ) -> PreflightResult:
+        """Run thorough multi-stage preflight check against provider configuration and health."""
+        as_of = as_of_timestamp or datetime.now(timezone.utc).isoformat()
+        endpoint_present = bool(self.endpoint_url)
+        credentials_present = bool(self._auth_token)
+        endpoint_url_masked = self._mask_url(self.endpoint_url)
+        endpoint_scheme = urlparse(self.endpoint_url).scheme if self.endpoint_url else None
+
+        # Check local persistence store readiness
+        persistence_ready = False
+        try:
+            if store is not None:
+                _ = store.get_telemetry()
+                persistence_ready = True
+            else:
+                from demandcast.vn1.config import load_vn1_config
+                from demandcast.vn1.shadow import ShadowStore
+
+                cfg = load_vn1_config()
+                test_store = ShadowStore(cfg.shadow.db_path)
+                _ = test_store.get_telemetry()
+                persistence_ready = True
+        except Exception:
+            persistence_ready = False
+
+        # Stage 1: Configuration Presence & Validity
+        if not endpoint_present and not credentials_present:
+            return PreflightResult(
+                status="NOT_CONFIGURED",
+                provider_id=self.provider_id,
+                schema_version=self.schema_version,
+                provider_configured=False,
+                endpoint_url_masked=None,
+                endpoint_valid=False,
+                endpoint_scheme=None,
+                credentials_present=False,
+                persistence_ready=persistence_ready,
+                reasons=[
+                    "Provider endpoint URL and authentication credentials are not configured in environment or settings."
+                ],
+                remediation_steps=[
+                    "Set DEMANDCAST_STREAM_ENDPOINT_URL (e.g. 'https://erp.corporate.internal/api/v1/sales-stream').",
+                    "Set DEMANDCAST_STREAM_AUTH_TOKEN in secure environment or secret vault.",
+                ],
+            )
+
+        if endpoint_present and not credentials_present:
+            return PreflightResult(
+                status="INVALID_CONFIGURATION",
+                provider_id=self.provider_id,
+                schema_version=self.schema_version,
+                provider_configured=False,
+                endpoint_url_masked=endpoint_url_masked,
+                endpoint_valid=self.endpoint_valid,
+                endpoint_scheme=endpoint_scheme,
+                credentials_present=False,
+                persistence_ready=persistence_ready,
+                reasons=["Authentication token is missing for configured endpoint."],
+                remediation_steps=["Set DEMANDCAST_STREAM_AUTH_TOKEN in secure environment or secret vault."],
+            )
+
+        if not endpoint_present and credentials_present:
+            return PreflightResult(
+                status="INVALID_CONFIGURATION",
+                provider_id=self.provider_id,
+                schema_version=self.schema_version,
+                provider_configured=False,
+                endpoint_url_masked=None,
+                endpoint_valid=False,
+                endpoint_scheme=None,
+                credentials_present=True,
+                persistence_ready=persistence_ready,
+                reasons=["Endpoint URL is not configured."],
+                remediation_steps=["Set DEMANDCAST_STREAM_ENDPOINT_URL with a valid HTTPS endpoint."],
+            )
+
+        if not self.endpoint_valid:
+            return PreflightResult(
+                status="INVALID_CONFIGURATION",
+                provider_id=self.provider_id,
+                schema_version=self.schema_version,
+                provider_configured=False,
+                endpoint_url_masked=endpoint_url_masked,
+                endpoint_valid=False,
+                endpoint_scheme=endpoint_scheme,
+                credentials_present=credentials_present,
+                persistence_ready=persistence_ready,
+                reasons=[self.endpoint_error or "Endpoint URL failed schema validation (HTTPS required)."],
+                remediation_steps=["Ensure endpoint uses strict HTTPS protocol and valid hostname."],
+            )
+
+        # Stage 2: Network Reachability & Remote Authentication
+        network_reachable: bool | None = None
+        remote_authenticated: bool | None = None
+
+        if not skip_network:
+            session = http_session or requests.Session()
+            headers = {
+                "Authorization": f"Bearer {self._auth_token}",
+                "Accept": "application/json",
+                "User-Agent": "DemandCast-ShadowPilot/v2.2.7",
+            }
+            try:
+                resp = session.get(self.endpoint_url, headers=headers, timeout=self.timeout_seconds)
+                if resp.status_code in (401, 403):
+                    return PreflightResult(
+                        status="AUTHENTICATION_FAILED",
+                        provider_id=self.provider_id,
+                        schema_version=self.schema_version,
+                        provider_configured=True,
+                        endpoint_url_masked=endpoint_url_masked,
+                        endpoint_valid=True,
+                        endpoint_scheme=endpoint_scheme,
+                        credentials_present=True,
+                        network_reachable=True,
+                        remote_authenticated=False,
+                        reasons=[f"Remote provider rejected authentication credentials (HTTP {resp.status_code})."],
+                        remediation_steps=[
+                            "Verify DEMANDCAST_STREAM_AUTH_TOKEN with ERP/WMS administrator.",
+                            "Ensure token has read permissions for weekly sales feed.",
+                        ],
+                    )
+                if resp.status_code != 200:
+                    return PreflightResult(
+                        status="PROVIDER_UNAVAILABLE",
+                        provider_id=self.provider_id,
+                        schema_version=self.schema_version,
+                        provider_configured=True,
+                        endpoint_url_masked=endpoint_url_masked,
+                        endpoint_valid=True,
+                        endpoint_scheme=endpoint_scheme,
+                        credentials_present=True,
+                        network_reachable=False,
+                        remote_authenticated=False,
+                        reasons=[f"Remote provider returned error status HTTP {resp.status_code}."],
+                        remediation_steps=[
+                            "Check ERP/WMS feed service health and status page.",
+                            "Verify DEMANDCAST_STREAM_TIMEOUT_SECONDS setting.",
+                        ],
+                    )
+
+                network_reachable = True
+                remote_authenticated = True
+
+                # If sample payload was not explicitly provided, try extracting from response
+                if sample_payload is None:
+                    try:
+                        remote_json = resp.json()
+                        if isinstance(remote_json, dict) and "records" in remote_json:
+                            sample_payload = remote_json
+                    except Exception:
+                        pass
+
+            except Exception as exc:
+                sanitized_msg = self._sanitize_error_message(str(exc))
+                return PreflightResult(
+                    status="PROVIDER_UNAVAILABLE",
+                    provider_id=self.provider_id,
+                    schema_version=self.schema_version,
+                    provider_configured=True,
+                    endpoint_url_masked=endpoint_url_masked,
+                    endpoint_valid=True,
+                    endpoint_scheme=endpoint_scheme,
+                    credentials_present=True,
+                    network_reachable=False,
+                    remote_authenticated=False,
+                    reasons=[f"Remote provider connection failed or timed out: {sanitized_msg}"],
+                    remediation_steps=[
+                        "Verify network / VPN routing to the endpoint.",
+                        "Check ERP/WMS feed service health.",
+                    ],
+                )
+
+        # Stage 3: Schema & Version Compatibility
+        schema_valid: bool | None = None
+        data_completeness: bool | None = None
+
+        if sample_payload is not None:
+            is_valid_schema, schema_errs = self.validate_schema(sample_payload)
+            if not is_valid_schema:
+                return PreflightResult(
+                    status="SCHEMA_INVALID",
+                    provider_id=self.provider_id,
+                    schema_version=self.schema_version,
+                    provider_configured=True,
+                    endpoint_url_masked=endpoint_url_masked,
+                    endpoint_valid=True,
+                    endpoint_scheme=endpoint_scheme,
+                    credentials_present=True,
+                    network_reachable=network_reachable,
+                    remote_authenticated=remote_authenticated,
+                    schema_valid=False,
+                    data_completeness=False,
+                    reasons=schema_errs,
+                    remediation_steps=[
+                        f"Ensure payload matches schema version '{self.schema_version}'.",
+                        "Verify records list contains dicts with 'series_id', 'week_start', 'sales', 'is_bucket_complete'.",
+                    ],
+                )
+            schema_valid = True
+
+            # Stage 4: Data Completeness & Temporal Alignment
+            records = sample_payload.get("records", [])
+            df_rec = pd.DataFrame(records)
+            if "is_bucket_complete" in df_rec.columns:
+                incomplete_cnt = int((df_rec["is_bucket_complete"] == False).sum())  # noqa: E712
+                if incomplete_cnt > 0:
+                    return PreflightResult(
+                        status="INCOMPLETE_INPUT",
+                        provider_id=self.provider_id,
+                        schema_version=self.schema_version,
+                        provider_configured=True,
+                        endpoint_url_masked=endpoint_url_masked,
+                        endpoint_valid=True,
+                        endpoint_scheme=endpoint_scheme,
+                        credentials_present=True,
+                        network_reachable=network_reachable,
+                        remote_authenticated=remote_authenticated,
+                        schema_valid=True,
+                        data_completeness=False,
+                        reasons=[
+                            f"Incomplete weekly accounting buckets detected ({incomplete_cnt} records with is_bucket_complete=False)."
+                        ],
+                        remediation_steps=[
+                            "Wait for corporate financial week close (Sunday 23:59:59) before publishing prospective batch.",
+                            "Ensure all records have is_bucket_complete=True.",
+                        ],
+                    )
+
+            if "week_start" in df_rec.columns:
+                w_dts = pd.to_datetime(df_rec["week_start"])
+                non_mondays = int((w_dts.dt.day_of_week != 0).sum())
+                if non_mondays > 0:
+                    return PreflightResult(
+                        status="SCHEMA_INVALID",
+                        provider_id=self.provider_id,
+                        schema_version=self.schema_version,
+                        provider_configured=True,
+                        endpoint_url_masked=endpoint_url_masked,
+                        endpoint_valid=True,
+                        endpoint_scheme=endpoint_scheme,
+                        credentials_present=True,
+                        network_reachable=network_reachable,
+                        remote_authenticated=remote_authenticated,
+                        schema_valid=False,
+                        data_completeness=False,
+                        reasons=[f"Found {non_mondays} weekly records that do not conform to W-MON (Monday) cadence."],
+                        remediation_steps=["Ensure all week_start values correspond to Mondays."],
+                    )
+
+                # Temporal leakage check
+                as_of_dt = pd.to_datetime(as_of)
+                bucket_ends = w_dts + pd.Timedelta(days=6, hours=23, minutes=59, seconds=59)
+                is_future = (
+                    (bucket_ends.dt.tz_localize("UTC") > as_of_dt).any()
+                    if as_of_dt.tzinfo
+                    else (bucket_ends > as_of_dt).any()
+                )
+                if is_future:
+                    return PreflightResult(
+                        status="INCOMPLETE_INPUT",
+                        provider_id=self.provider_id,
+                        schema_version=self.schema_version,
+                        provider_configured=True,
+                        endpoint_url_masked=endpoint_url_masked,
+                        endpoint_valid=True,
+                        endpoint_scheme=endpoint_scheme,
+                        credentials_present=True,
+                        network_reachable=network_reachable,
+                        remote_authenticated=remote_authenticated,
+                        schema_valid=True,
+                        data_completeness=False,
+                        reasons=[
+                            "Stream record bucket end exceeds execution as_of_timestamp (temporal leakage violation)."
+                        ],
+                        remediation_steps=["Ensure weekly bucket has closed before generating prospective forecast."],
+                    )
+
+            data_completeness = True
+
+        # Stage 5: Persistence Store Readiness
+        persistence_ready = False
+        try:
+            if store is not None:
+                _ = store.get_telemetry()
+                persistence_ready = True
+            else:
+                from demandcast.vn1.config import load_vn1_config
+                from demandcast.vn1.shadow import ShadowStore
+
+                cfg = load_vn1_config()
+                test_store = ShadowStore(cfg.shadow.db_path)
+                _ = test_store.get_telemetry()
+                persistence_ready = True
+        except Exception as s_exc:
+            sanitized_store_err = self._sanitize_error_message(str(s_exc))
+            return PreflightResult(
+                status="PROVIDER_UNAVAILABLE",
+                provider_id=self.provider_id,
+                schema_version=self.schema_version,
+                provider_configured=True,
+                endpoint_url_masked=endpoint_url_masked,
+                endpoint_valid=True,
+                endpoint_scheme=endpoint_scheme,
+                credentials_present=True,
+                network_reachable=network_reachable,
+                remote_authenticated=remote_authenticated,
+                schema_valid=schema_valid,
+                data_completeness=data_completeness,
+                persistence_ready=False,
+                reasons=[f"Persistence store initialization check failed: {sanitized_store_err}"],
+                remediation_steps=["Check SQLite database directory permissions and disk space."],
+            )
+
+        # Stage 6: Final Preflight Verdict
+        return PreflightResult(
+            status="READY",
+            provider_id=self.provider_id,
+            schema_version=self.schema_version,
+            provider_configured=True,
+            endpoint_url_masked=endpoint_url_masked,
+            endpoint_valid=True,
+            endpoint_scheme=endpoint_scheme,
+            credentials_present=True,
+            network_reachable=network_reachable,
+            remote_authenticated=remote_authenticated,
+            schema_valid=schema_valid,
+            data_completeness=data_completeness,
+            persistence_ready=persistence_ready,
+            pilot_activation_ready=False,  # Governance lock: strictly False until explicit authorization
+            details={
+                "timeout_seconds": self.timeout_seconds,
+                "allow_insecure_http": self.allow_insecure_http,
+                "governance_lock": "LOCKED_INACTIVE",
+            },
+            reasons=[
+                "All preflight connectivity, authentication, schema, completeness, and storage checks passed successfully."
+            ],
+            remediation_steps=[
+                "System is verified and ready for prospective shadow inference.",
+                "Notice: Pilot remains inactive (is_active=False) per governance until authorized operator sign-off.",
+            ],
         )

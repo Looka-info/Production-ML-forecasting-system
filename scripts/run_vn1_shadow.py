@@ -1,12 +1,15 @@
-"""CLI Runner for DemandCast v2.2 Production-Safe Shadow Forecasting Pipeline.
+"""CLI Runner for DemandCast v2.2/v2.2.7 Production-Safe Shadow Forecasting Pipeline.
 
 Commands:
+  preflight  - Run provider preflight, endpoint schema, credentials, network, and operator readiness checks.
   forecast   - Generate shadow forecasts for Production and Candidate D on an input snapshot.
   reconcile  - Ingest observed actuals and reconcile them against pending shadow forecasts.
   report     - Generate evaluation and comparison report on matched forecasts.
   telemetry  - Display current operational status and shadow pipeline telemetry.
 
 Usage examples:
+  python scripts/run_vn1_shadow.py preflight
+  python scripts/run_vn1_shadow.py preflight --endpoint-url https://erp.corporate.internal/stream
   python scripts/run_vn1_shadow.py forecast --series-subset 250 --mode historical_replay
   python scripts/run_vn1_shadow.py reconcile --actuals-path data/vn1/raw/Phase_1_Sales.csv
   python scripts/run_vn1_shadow.py report
@@ -23,8 +26,10 @@ import pandas as pd
 
 from demandcast.config import get_project_root
 from demandcast.vn1.config import load_vn1_config
+from demandcast.vn1.ingestion import ProspectiveStreamIngestionAdapter
 from demandcast.vn1.shadow import (
     ShadowEvaluator,
+    ShadowPilotConfig,
     ShadowStore,
     VN1ShadowPipeline,
 )
@@ -301,9 +306,120 @@ def cmd_telemetry(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_preflight(args: argparse.Namespace) -> int:
+    """Run provider preflight and operator readiness diagnostics."""
+    config = load_vn1_config()
+    db_path = args.db_path or config.shadow.db_path
+    store = ShadowStore(db_path)
+
+    sample_payload = None
+    if args.sample_payload:
+        p_path = Path(args.sample_payload)
+        if p_path.exists():
+            with open(p_path, "r", encoding="utf-8") as f:
+                sample_payload = json.load(f)
+        else:
+            logger.warning(f"Specified sample payload file does not exist: {p_path}")
+
+    adapter = ProspectiveStreamIngestionAdapter(
+        endpoint_url=args.endpoint_url,
+        auth_token=args.auth_token,
+        allow_insecure_http=args.allow_insecure_http,
+    )
+
+    res = adapter.run_preflight(
+        store=store,
+        sample_payload=sample_payload,
+        skip_network=args.skip_network,
+    )
+
+    pilot = ShadowPilotConfig()
+    is_activation_ready, activation_reasons = pilot.validate_activation_readiness(adapter)
+
+    if args.json:
+        out = {
+            "preflight": res.to_dict(),
+            "pilot_governance": {
+                "pilot_name": pilot.pilot_name,
+                "version": pilot.version,
+                "is_active": pilot.is_active,
+                "provider_status": pilot.provider_status,
+                "activation_ready": is_activation_ready,
+                "activation_reasons": activation_reasons,
+                "active_production_model": pilot.active_production_model,
+                "promotion_policy": pilot.promotion_policy,
+            },
+        }
+        print(json.dumps(out, indent=2))
+        return 0 if res.status == "READY" else 1
+
+    print("\n" + "=" * 88)
+    print("DEMANDCAST v2.2.7 SHADOW PILOT PREFLIGHT & OPERATOR READINESS CHECK")
+    print("=" * 88)
+    print(f"Overall Preflight Status:      {res.status}")
+    print(f"Provider Identifier:           {res.provider_id}")
+    print(f"Target Schema Version:         {res.schema_version}")
+    print("-" * 88)
+    print("1. Provider Configuration:")
+    print(f"   Endpoint Configured:        {res.provider_configured} ({res.endpoint_url_masked or 'None'})")
+    print(f"   Endpoint Scheme:            {res.endpoint_scheme or 'None'} (Valid: {res.endpoint_valid})")
+    print(f"   Credentials Present:        {res.credentials_present} (Value strictly redacted)")
+    print(f"   Timeout Setting:            {adapter.timeout_seconds}s")
+    print()
+    print("2. Remote Network & Authentication:")
+    net_str = "SKIPPED" if res.network_reachable is None else ("PASSED" if res.network_reachable else "FAILED")
+    auth_str = "SKIPPED" if res.remote_authenticated is None else ("PASSED" if res.remote_authenticated else "FAILED")
+    print(f"   Network Reachable:          {net_str}")
+    print(f"   Remote Authenticated:       {auth_str}")
+    print()
+    print("3. Schema & Version Contract:")
+    sch_str = "NOT EVALUATED" if res.schema_valid is None else ("PASSED" if res.schema_valid else "FAILED")
+    print(f"   Schema Validation:          {sch_str}")
+    print()
+    print("4. Weekly Data Completeness Contract:")
+    comp_str = "NOT EVALUATED" if res.data_completeness is None else ("PASSED" if res.data_completeness else "FAILED")
+    print(f"   Accounting Completeness:    {comp_str}")
+    print()
+    print("5. Persistence & Reconciliation:")
+    print(f"   Store Connection:           {'PASSED' if res.persistence_ready else 'FAILED'}")
+    print(f"   Database Path:              {db_path}")
+    print()
+    print("6. Governance & Pilot Activation Safeguards:")
+    print(f"   Pilot Active State:         is_active={pilot.is_active} (Governance Lock)")
+    print(f"   Active Production Model:    {pilot.active_production_model} (Pinned v1.0.0)")
+    print(f"   Promotion Policy:           {pilot.promotion_policy} (Zero auto-promotion)")
+    print(f"   Candidate C Role:           {pilot.challenger_c_model} (Experimental)")
+    print(f"   Candidate D Role:           {pilot.challenger_d_model} (Experimental)")
+    print(f"   Pilot Activation Ready:     {is_activation_ready}")
+    print("-" * 88)
+    print("Diagnostic Reasons:")
+    for r in res.reasons:
+        print(f"  - {r}")
+    if activation_reasons:
+        for ar in activation_reasons:
+            print(f"  [Governance Safeguard] {ar}")
+    print("-" * 88)
+    print("Recommended Operator Action:")
+    for step in res.remediation_steps:
+        print(f"  * {step}")
+    print("=" * 88 + "\n")
+
+    return 0 if res.status == "READY" else 1
+
+
 def main():
-    parser = argparse.ArgumentParser(description="DemandCast v2.2 Production-Safe Shadow Pipeline.")
+    parser = argparse.ArgumentParser(description="DemandCast v2.2.7 Production-Safe Shadow Pipeline.")
     subparsers = parser.add_subparsers(dest="command", required=True, help="Shadow subcommands")
+
+    # 0. Preflight
+    p_pf = subparsers.add_parser("preflight", help="Run provider preflight and readiness check")
+    p_pf.add_argument("--endpoint-url", type=str, default=None, help="Provider stream endpoint URL")
+    p_pf.add_argument("--auth-token", type=str, default=None, help="Authentication token")
+    p_pf.add_argument("--sample-payload", type=str, default=None, help="Path to sample payload JSON file")
+    p_pf.add_argument("--allow-insecure-http", action="store_true", help="Allow plain HTTP (for local test endpoints)")
+    p_pf.add_argument("--skip-network", action="store_true", help="Skip remote network reachability probe")
+    p_pf.add_argument("--db-path", type=str, default=None, help="Custom SQLite db path")
+    p_pf.add_argument("--json", action="store_true", help="Output preflight report as JSON")
 
     # 1. Forecast
     p_fc = subparsers.add_parser("forecast", help="Run shadow forecast on snapshot")
@@ -347,7 +463,9 @@ def main():
 
     args = parser.parse_args()
 
-    if args.command == "forecast":
+    if args.command == "preflight":
+        sys.exit(cmd_preflight(args))
+    elif args.command == "forecast":
         sys.exit(cmd_forecast(args))
     elif args.command == "reconcile":
         sys.exit(cmd_reconcile(args))

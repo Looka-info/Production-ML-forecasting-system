@@ -91,7 +91,7 @@ class ShadowPilotConfig:
     """Governs prospective live shadow pilot configuration, candidate registration, and safeguards."""
 
     pilot_name: str = "VN1_Challenger_Live_Shadow_Pilot"
-    version: str = "v2.2.6"
+    version: str = "v2.2.7"
     active_production_model: str = "Baseline_MovingAvg12_Official"
     challenger_c_model: str = "PreOrigin_Evidence_Gated_Calibrated"
     challenger_d_model: str = "Baseline_MovingAvg12_PostHolidayTargeted"
