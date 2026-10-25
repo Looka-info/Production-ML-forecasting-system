@@ -53,8 +53,9 @@ models/releases/*
 !models/releases/v1.0.0/
 !models/releases/.gitkeep
 
-# Reports generated during backtesting (ignore large plot figures, keep tabular metrics/reports)
+# Reports generated during backtesting (track publication figures, keep tabular metrics/reports)
 reports/figures/*
+!reports/figures/*.png
 !reports/figures/.gitkeep
 
 # Testing & Coverage

@@ -1,12 +1,45 @@
 # DemandCast — Complete Production ML Forecasting System
 
-[![DemandCast CI](https://github.com/mumer/demandcast/actions/workflows/ci.yml/badge.svg)](https://github.com/mumer/demandcast/actions/workflows/ci.yml)
+[![DemandCast CI](https://github.com/Looka-info/Production-ML-forecasting-system/actions/workflows/ci.yml/badge.svg)](https://github.com/Looka-info/Production-ML-forecasting-system/actions/workflows/ci.yml)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
 [![MLflow](https://img.shields.io/badge/MLflow-2.10+-orange.svg)](https://mlflow.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
+[![Code Style: Ruff](https://img.shields.io/badge/Code%20Style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Tests: 52 Passed](https://img.shields.io/badge/Tests-52%20Passed%20(0%20warnings)-brightgreen.svg)](tests/)
 
-**DemandCast** is a complete, production-grade retail demand forecasting and model serving system developed as an advanced Machine Learning Engineering capstone. It takes a weekly demand forecasting problem through the entire ML lifecycle: dataset ingestion and provenance tracking, auditable data cleaning, training-only product selection, leakage-free feature engineering, chronological backtesting, MLflow experiment tracking, immutable release versioning, FastAPI serving, Docker containerization, post-forecast quality monitoring, and automated rollback workflows.
+**DemandCast** is a complete, production-grade retail demand forecasting and model serving system developed as an advanced Machine Learning Engineering capstone. It takes a weekly demand forecasting problem through the entire end-to-end ML lifecycle: dataset ingestion and provenance tracking, auditable data cleaning, training-only product selection, leakage-free feature engineering, chronological backtesting, MLflow experiment tracking, immutable release versioning, FastAPI serving, Docker containerization, post-forecast quality monitoring, and automated rollback workflows.
+
+Repository: **[https://github.com/Looka-info/Production-ML-forecasting-system](https://github.com/Looka-info/Production-ML-forecasting-system)**
+
+---
+
+## System Architecture & End-to-End Workflow
+
+```mermaid
+flowchart TD
+    subgraph Data Pipeline
+        A["Raw UCI Transaction Archive<br/>(1,067,371 rows)"] --> B["Auditable Data Cleaning & Deduplication<br/>(Drop cancels, returns, non-merchandise)"]
+        B --> C["Monday Week-Start Aggregation<br/>([Mon 00:00 to Sun 23:59:59])"]
+        C --> D["Training-Only SKU Selection<br/>(Cutoff: 2010-10-01, 15 Target SKUs)"]
+        D --> E["105 Complete Calendar Weeks Grid<br/>(Zero-filled intermittent weeks)"]
+    end
+
+    subgraph Feature Engineering & Modeling
+        E --> F["Leakage-Safe Features<br/>(Lags, Shifted Rolling Means/Stds, Calendar)"]
+        F --> G["Chronological Backtesting Engine<br/>(Expanding-window, 3 validation origins)"]
+        G --> H["Empirical Model Comparison<br/>(MAE, RMSE, WAPE, sMAPE, MASE, Bias)"]
+    end
+
+    subgraph Governance & Deployment
+        H --> I{"Validation Gate Evaluation<br/>(Target WAPE <= 50.00%)"}
+        I -- Alert Triggered --> J["Audited Operational Override<br/>(Promote Best Baseline: v1.0.0)"]
+        J --> K["Immutable Model Registry<br/>(model.joblib + SHA-256 + metadata.json)"]
+        K --> L["Atomic Release Pointer<br/>(models/current.json)"]
+        L --> M["FastAPI Production Service<br/>(/health, /ready, /metadata, /forecast)"]
+        M --> N["Operational Monitoring<br/>(Actuals reconciliation, drift alerts, rollback)"]
+    end
+```
 
 ---
 
@@ -51,7 +84,7 @@ Data cleaning rules are defined in `configs/config.yaml` and executed via `scrip
 
 ---
 
-## 4. Product Selection Without Lookahead Leakage
+## 4. Product Selection & Portfolio Characteristics
 
 Selecting high-volume products using full-dataset totals introduces **lookahead bias** because future performance dictates model inclusion. DemandCast resolves this by filtering products **strictly using transactions prior to `2010-10-01`**:
 
@@ -60,6 +93,12 @@ Selecting high-volume products using full-dataset totals introduces **lookahead 
 3. **Selected Catalog (Top 15)**:
    `['21212', '85123A', '85099B', '84077', '84991', '17003', '84879', '21977', '21980', '84755', '21984', '21232', '84270', '21213', '71459']`
 4. Stored in immutable catalog `data/processed/selected_series.json`.
+
+### Product Demand Profile & Intermittency Analysis
+
+![Product Portfolio Characteristics](reports/figures/sku_demand_profile.png)
+
+> **Key Empirical Finding**: The product portfolio exhibits high demand variance and intermittent zero-demand weeks (up to 51.4% zero-sales weeks for SKU `84270`). Because stockout signals are unrecorded, supervised models easily overfit localized sales spikes while moving averages deliver smooth, robust replenishment targets.
 
 ---
 
@@ -104,7 +143,46 @@ At forecast target week $t$, only information prior to $t$ is utilized:
 | **HistGradientBoosting** | Held-Out Final Test (3w, 45 obs) | 1 | 247.74 | 454.88 | 55.25% | 59.68% | 0.6099 | +23.13% | Tracked Candidate |
 | **Baseline_SeasonalNaive52** | Held-Out Final Test (3w, 45 obs) | 1 | 473.24 | 706.65 | 105.55% | 83.30% | 1.0858 | +79.60% | Benchmark |
 
-### 6.3 Scientific Analysis & Model Selection Integrity
+---
+
+### 6.3 Evaluation Visualizations & Deep Dive Analysis
+
+#### Empirical Model Benchmark Dashboard
+![Empirical Model Comparison Dashboard](reports/figures/model_benchmark_summary.png)
+
+The four-panel comparison demonstrates why `Baseline_MovingAvg4` is the winning production strategy:
+1. **WAPE (Volume-Weighted Error)**: `Baseline_MovingAvg4` achieves **55.16%** on validation, outperforming GBDT (**88.30%**) by 33.14 percentage points.
+2. **MASE (Scaled Error)**: With MASE = **0.5837**, the 4-week moving average cuts in-sample naive error by over 41%, whereas GBDT approaches parity (0.9680).
+3. **Relative Bias**: GBDT displays massive positive bias (**+51.96%**), systematically overestimating replenishment requirements, while `Baseline_MovingAvg4` remains near neutral (**-5.31%**).
+
+---
+
+#### Forecast vs. Observed Demand Trajectories
+![Forecast Comparison vs Actuals](reports/figures/forecast_comparison.png)
+
+This trajectory comparison over multiple validation origins highlights how each algorithm handles real-world demand shifts:
+- The **4-week Moving Average** smoothly tracks baseline sales trends without overreacting to isolated holiday spikes.
+- The **HistGradientBoosting** candidate attempts to forecast sharp holiday spikes, leading to large over-prediction errors when timing is offset by even one week.
+
+---
+
+#### Error Growth Across Forecast Horizon Steps ($h = 1..4$)
+![MAE and WAPE Growth by Horizon Step](reports/figures/metrics_by_horizon.png)
+
+Multi-step recursive forecasting demonstrates predictable error growth across the 4-week planning window:
+- Step 1 ($h=1$) exhibits the lowest error across all models.
+- At Steps 3 and 4 ($h=3, 4$), the GBDT recursive feature feeding mechanism accumulates errors, accelerating MAE and WAPE inflation compared to the moving average benchmark.
+
+---
+
+#### Residual Error Distribution
+![Residual Error Distribution](reports/figures/residual_distribution.png)
+
+The residual diagnostic ($\hat{y} - y$) illustrates that supervised ML errors have a heavy right tail (over-forecasting), further confirming why baseline moving average was selected for production operations.
+
+---
+
+### 6.4 Scientific Analysis & Model Selection Integrity
 1. **The Reality of Retail Intermittency & Volatility**: The 4-week Moving Average benchmark decisively outperforms the supervised ML model across all validation metrics (Validation WAPE: 55.16% vs. 88.30%; MASE: 0.5837 vs. 0.9680; MAE: 255.94 vs. 409.73; RMSE: 491.47 vs. 683.91).
 2. **Promoting the Best Performer**: In strict adherence to ML engineering integrity, DemandCast promotes the winning **4-week Moving Average baseline** as the active production release (`v1.0.0`). The project avoids complex model bias: a complex model is not deployed when a simple baseline delivers superior accuracy.
 3. **Tracking the ML Candidate**: `HistGradientBoosting` is retained and tracked in the model registry as `v1.0.0-candidate-hgb` for continuous research and hyperparameter optimization.
@@ -149,8 +227,8 @@ Releases are managed via `src/demandcast/registry.py` under `models/releases/<ve
 - `models/current.json`: Atomic pointer pointing to the active release.
 
 ```powershell
-# Promote a release (runs artifact verification, inference smoke test, and quality gate check)
-python scripts/promote_model.py --version v1.0.0 --reason "Promoted winning 4-week moving average baseline under audited override"
+# Promote a release (requires --allow-alert-override and --reason if WAPE > threshold)
+python scripts/promote_model.py --version v1.0.0 --allow-alert-override --reason "Promoted winning 4-week moving average baseline on validation backtests (WAPE: 55.16%, MASE: 0.5837 vs HGB 88.30%) under audited quality alert override"
 
 # Roll back to a previous release atomically
 python scripts/rollback_model.py --to v1.0.0 --reason "Operational rollback requested"
@@ -219,8 +297,6 @@ Using historical weekly sales observations through the model's training cutoff d
 
 ## 9. Operational Monitoring & Drift Detection
 
-## 9. Operational Monitoring & Drift Detection
-
 DemandCast provides an offline evaluation workflow in `src/demandcast/monitoring.py` and `scripts/evaluate_forecasts.py`:
 - **WAPE & Bias Alerts**: Alerts triggered if aggregate WAPE $> 50\%$ or normalized relative bias exceeds $\pm 25\%$ ($\text{Relative Bias} = \frac{\sum (\hat{y} - y)}{\sum y}$).
 - **Two-Sample Kolmogorov-Smirnov Test**: Serves as a descriptive marginal distribution diagnostic comparing forecast outputs against observed actual demand.
@@ -239,14 +315,14 @@ DemandCast provides an offline evaluation workflow in `src/demandcast/monitoring
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# Install package and dependencies
+# Install package and pinned dependencies
 pip install -r requirements.txt
 pip install -e .
 ```
 
 ### 10.2 Run Full Data & Training Pipeline
 ```powershell
-# 1. Download official UCI dataset and verify checksum
+# 1. Download official UCI dataset and verify SHA-256 checksum
 python scripts/download_data.py
 
 # 2. Clean transactions, select products, and aggregate weekly demand
@@ -259,12 +335,12 @@ python scripts/run_backtests.py
 python scripts/train_model.py --version v1.0.0
 
 # 5. Promote release to active model pointer
-python scripts/promote_model.py --version v1.0.0
+python scripts/promote_model.py --version v1.0.0 --allow-alert-override --reason "Audited promotion"
 
 # 6. Run post-forecast monitoring and drift evaluation
 python scripts/evaluate_forecasts.py
 
-# 7. Verify live API endpoints
+# 7. Verify live API endpoints and temporal contracts
 python scripts/verify_api_live.py
 ```
 
@@ -273,7 +349,7 @@ python scripts/verify_api_live.py
 # Run Ruff linting
 ruff check .
 
-# Run Pytest suite (52 unit and integration tests, warnings treated as errors)
+# Run Pytest suite (52 unit and integration tests under strict warning policy)
 pytest -v
 ```
 
@@ -296,7 +372,7 @@ Interactive API documentation: `http://localhost:8000/docs`
 
 ```
 demandcast/
-├── README.md                           # Master project documentation
+├── README.md                           # Master project documentation with architecture & figures
 ├── pyproject.toml                      # Package build configuration & tool settings
 ├── requirements.txt                    # Pinned runtime and development dependencies
 ├── Dockerfile                          # Multi-stage production container definition
@@ -345,12 +421,14 @@ demandcast/
 ├── reports/
 │   ├── model_comparison.csv            # Empirical benchmark comparison table
 │   ├── backtest_results.csv            # Detailed validation forecasts vs actuals
-│   ├── test_horizon_results.csv        # Final held-out test predictions
+│   ├── test_horizon_results.csv        # Final held-out test predictions (45 observations)
 │   ├── data_quality_report.json        # Auditable cleaning and exclusion counts
 │   ├── series_summary.csv              # Time-series summary statistics per SKU
 │   ├── monitoring_report.json          # Post-forecast reconciliation & alert metrics
-│   └── figures/
-│       ├── forecast_comparison.png     # Forecasts vs actuals over time
+│   └── figures/                        # High-resolution evaluation graphs
+│       ├── model_benchmark_summary.png # 4-panel empirical comparison (WAPE, MASE, MAE, Bias)
+│       ├── sku_demand_profile.png      # Portfolio demand volume & intermittency analysis
+│       ├── forecast_comparison.png     # Forecasts vs actuals trajectories over time
 │       ├── metrics_by_horizon.png      # Error growth across weeks 1 to 4
 │       └── residual_distribution.png   # ML model error distribution
 ├── models/
@@ -372,7 +450,7 @@ demandcast/
 │   ├── test_monitoring.py              # Tests for drift detection & quality checks
 │   └── test_rollback.py                # Tests for model promotion & rollback lifecycle
 ├── docs/
-│   ├── architecture.md                 # System architecture & Mermaid sequence diagrams
+│   ├── architecture.md                 # System architecture & sequence diagrams
 │   ├── methodology.md                  # Forecasting problem formulation & backtest design
 │   ├── monitoring.md                   # Operational monitoring & rollback protocol
 │   └── model_card.md                   # Comprehensive model governance card
@@ -390,9 +468,5 @@ demandcast/
 3. **Temporal Contract**: The standard `/forecast` endpoint rejects forecast origins predating the model training cutoff (`2011-11-07`) to prevent in-sample lookahead bias.
 4. **History Depth Requirements**: Minimum history is 4 weeks for the active Moving Average forecaster, 13 weeks for the supervised ML candidate (or 53 weeks if seasonal lag 52 is enabled).
 5. **Container Deployment Status**: The multi-stage `Dockerfile` and `compose.yaml` configurations are fully implemented with read-only release volume mounts; local container runtime execution could not be verified because the host Docker Desktop engine is currently stopped.
-6. **Continuous Integration Status**: GitHub Actions CI workflow is configured in `.github/workflows/ci.yml` (linting, pytest suite, and docker build); execution has not yet run on a remote hosted runner because this local repository has no remote tracking branch configured.
-7. **Git Repository Status**: The local repository has been initialized on branch `main` with the root commit tracking all verified production code, configs, tests, documentation, and release v1.0.0 artifacts. To connect to a remote repository when ready:
-   ```powershell
-   git remote add origin <your-repository-url>
-   git push -u origin main
-   ```
+6. **Continuous Integration Status**: GitHub Actions CI workflow is configured in `.github/workflows/ci.yml` (linting, pytest suite, and docker build); hosted execution runs automatically upon push to GitHub.
+7. **Git Repository Status**: The repository is tracked on branch `main` at **[https://github.com/Looka-info/Production-ML-forecasting-system](https://github.com/Looka-info/Production-ML-forecasting-system)**.
