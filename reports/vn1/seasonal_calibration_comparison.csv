@@ -1,0 +1,8 @@
+vn1_score,wape,mae,rmse,smape,bias,relative_bias,candidate_key,model_name,evaluation_scope,post_holiday_vn1_score,post_holiday_bias,post_holiday_wape,ordinary_vn1_score,ordinary_bias,ordinary_wape
+0.3473,0.3296,149.3224,385.8296,38.0834,7.9922,0.0176,Comparison_Naive,Baseline_Naive,All_Historical_Origins_Combined,0.4185,0.0791,0.3395,0.3602,-0.0397,0.3204
+0.3559,0.3502,158.6193,349.1536,41.273,2.598,0.0057,Candidate_E_PriceCalibrated,Baseline_MovingAvg12_PriceCalibrated,All_Historical_Origins_Combined,0.3903,0.0318,0.3585,0.3609,-0.0186,0.3423
+0.3619,0.3535,160.1353,354.1212,41.4778,3.8157,0.0084,Candidate_D_PostHolidayTargeted,Baseline_MovingAvg12_PostHolidayTargeted,All_Historical_Origins_Combined,0.4207,0.0509,0.3698,0.3696,-0.0313,0.3383
+0.3711,0.3554,160.9766,354.1336,41.564,7.1365,0.0158,Candidate_C_ShrunkClient,Baseline_MovingAvg12_ShrunkClient,All_Historical_Origins_Combined,0.4183,0.0503,0.368,0.3601,-0.0165,0.3436
+0.3813,0.3693,167.2795,367.5865,42.081,5.4302,0.012,Candidate_A_Unadjusted,Baseline_MovingAvg12_Unadjusted,All_Historical_Origins_Combined,0.4608,0.0583,0.4024,0.3696,-0.0313,0.3383
+0.3824,0.3669,166.2191,365.9815,41.9642,-7.0304,-0.0155,Candidate_B_GlobalFactor,Baseline_MovingAvg12_GlobalFactor,All_Historical_Origins_Combined,0.4382,0.0383,0.3999,0.4019,-0.0658,0.3361
+0.4093,0.3796,171.9757,414.5118,41.76,13.4387,0.0297,Comparison_MovingAvg4,Baseline_MovingAvg4,All_Historical_Origins_Combined,0.512,0.0828,0.4292,0.3533,-0.02,0.3334

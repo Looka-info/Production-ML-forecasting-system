@@ -6,13 +6,14 @@
 [![MLflow](https://img.shields.io/badge/MLflow-2.10+-orange.svg)](https://mlflow.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 [![Code Style: Ruff](https://img.shields.io/badge/Code%20Style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
-[![Tests: 78 Passed](https://img.shields.io/badge/Tests-78%20Passed%20(0%20warnings)-brightgreen.svg)](tests/)
+[![Tests: 86 Passed](https://img.shields.io/badge/Tests-86%20Passed%20(0%20warnings)-brightgreen.svg)](tests/)
 
 **DemandCast** is a complete, production-grade retail demand forecasting and multi-profile model serving system developed as an advanced Machine Learning Engineering capstone. It takes weekly retail demand forecasting through the entire end-to-end ML lifecycle: dataset ingestion and provenance tracking, auditable data cleaning, training-only product selection, leakage-free feature engineering, chronological backtesting, MLflow experiment tracking, immutable release versioning, multi-profile FastAPI serving, Docker containerization, post-forecast quality monitoring, and automated rollback workflows.
 
 DemandCast supports two production profiles:
 1. **DemandCast v1 (UCI Online Retail II Profile)**: 4-week forward forecasting on UK e-commerce giftware transactions across 15 high-volume catalog SKUs, promoted moving-average baseline under audited operational override.
 2. **DemandCast v2 (VN1 Retail Forecasting Profile)**: 13-week forward multi-step forecasting across 15,053 product–warehouse series from 46 e-commerce vendors (July 2020 – April 2024), evaluated under the official VN1 competition metric with price-aware LightGBM and moving-average benchmarks.
+3. **DemandCast v2.1 (Post-Holiday Seasonal Calibration Research)**: Post-holiday calibration layer investigating calendar-aware adjustments and empirical Bayes shrinkage on moving-average baselines across historical rolling origins.
 
 Repository: **[https://github.com/Looka-info/Production-ML-forecasting-system](https://github.com/Looka-info/Production-ML-forecasting-system)**
 
@@ -128,6 +129,69 @@ Evaluating all 6 candidate models on the 250-series development subset reveals h
 
 ##### Forecast Trajectories vs. Phase 2 Ground-Truth Actuals
 ![Phase 2 Forecast Examples](reports/vn1/figures/phase2_forecast_examples.png)
+
+### 7. DemandCast v2.1 — Post-Holiday Seasonal Calibration Research
+
+DemandCast v2.1 introduces an experimental **Post-Holiday Seasonal Calibration** research layer. The objective is to investigate whether calendar-aware adjustment and hierarchy-level shrinkage can resolve the post-holiday bias cliff on moving-average baselines without requiring complex machine learning models.
+
+#### A. Research Problem & The Post-Holiday Bias Cliff
+
+During Phase 2 evaluation, the unadjusted 12-week moving average exhibited severe positive bias (**+19.49% across the full catalog**, **+12.95% on the subset**) because it projected high Q4 holiday peak sales flat into Q1.
+
+Historical diagnostics on Phase 0 (`2020-07-06` to `2023-10-02`, 170 continuous weeks) reveal that this post-holiday demand drop is a recurring structural property of the catalog:
+- **2020 Q4 $\rightarrow$ 2021 Q1**: Transition ratio = **0.9076** (-9.24% drop)
+- **2021 Q4 $\rightarrow$ 2022 Q1**: Transition ratio = **0.8726** (-12.74% drop)
+- **2022 Q4 $\rightarrow$ 2023 Q1**: Transition ratio = **0.9159** (-8.41% drop)
+- **Mid-Year Controls**: In contrast, ordinary mid-year transitions (e.g. Q2 $\rightarrow$ Q3) showed demand growth (+10.22% in 2021, +4.87% in 2022).
+
+#### B. Strict Leakage Prevention & Governance Commitment
+
+> [!IMPORTANT]
+> **Data Snooping Prevention & Governance Rule**:
+> Phase 2 actuals were previously inspected during Phase 2 evaluation. Therefore, Phase 2 data was **strictly forbidden** from being used to tune seasonal multipliers, shrinkage parameters ($k$), calendar windows, or selection rules. All calibration factors were fitted exclusively using completed annual transitions strictly prior to the forecast origin date. The active production release pointer (`models/profiles/vn1/current.json`) remains on `v1.0.0` (`Baseline_MovingAvg12_Official`), and Candidate D is accepted strictly as an **experimental research candidate**.
+
+#### C. Candidate Strategies
+
+1. **Candidate A (Control)**: `Baseline_MovingAvg12_Unadjusted` — Raw 12-week moving average.
+2. **Candidate B (Global Factor)**: `Baseline_MovingAvg12_GlobalFactor` — Flat global ratio applied year-round.
+3. **Candidate C (Shrunk Client)**: `Baseline_MovingAvg12_ShrunkClient` — Empirical Bayes shrunk client factor ($w_c = \frac{\text{vol}}{\text{vol} + k}$, $k=100.0$) applied year-round.
+4. **Candidate D (Post-Holiday Targeted)**: `Baseline_MovingAvg12_PostHolidayTargeted` — Shrunk client factor applied strictly during post-holiday weeks (calendar weeks 1 to 13), remaining strictly neutral (factor = 1.0) outside the window.
+5. **Candidate E (Price-Aware Calibrated)**: `Baseline_MovingAvg12_PriceCalibrated` — Combines targeted post-holiday factor with origin price sensitivity dampening.
+6. **Comparison Baselines**: `Baseline_MovingAvg4`, `Baseline_Naive`.
+
+#### D. Historical Rolling-Origin Evaluation Results (Phase 0 Backtest)
+
+Evaluated across 4 historical Phase 0 rolling origins (Post-Holiday: `2022-01-03`, `2023-01-02`; Ordinary Calendar: `2022-07-04`, `2023-04-03`) across 250 series (13,000 observations):
+
+| Candidate Strategy | Model Name | Overall VN1 Score ↓ | Overall WAPE ↓ | Overall Rel Bias | Post-Holiday VN1 Score ↓ | Post-Holiday Rel Bias | Ordinary VN1 Score ↓ | Ordinary Rel Bias | Governance Decision |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`Comparison_Naive`** | `Baseline_Naive` | **0.3473** | **0.3296** | +0.0176 | 0.4185 | +0.0791 | 0.3602 | -0.0397 | Benchmark |
+| **`Candidate_E_PriceCalibrated`** | `Baseline_MovingAvg12_PriceCalibrated` | 0.3559 | 0.3502 | **+0.0057** | **0.3903** | **+0.0318** | 0.3609 | -0.0186 | Research Candidate |
+| **`Candidate_D_PostHolidayTargeted`** | `Baseline_MovingAvg12_PostHolidayTargeted` | 0.3619 | 0.3535 | +0.0084 | 0.4207 | +0.0509 | 0.3696 | -0.0313 | **ACCEPTED AS RESEARCH CANDIDATE** |
+| **`Candidate_C_ShrunkClient`** | `Baseline_MovingAvg12_ShrunkClient` | 0.3711 | 0.3554 | +0.0158 | 0.4183 | +0.0503 | 0.3601 | -0.0165 | Rejected (All-Year Distortion) |
+| **`Candidate_A_Unadjusted`** | `Baseline_MovingAvg12_Unadjusted` | 0.3813 | 0.3693 | +0.0120 | 0.4608 | +0.0583 | 0.3696 | -0.0313 | Control Baseline |
+| **`Candidate_B_GlobalFactor`** | `Baseline_MovingAvg12_GlobalFactor` | 0.3824 | 0.3669 | -0.0155 | 0.4382 | +0.0383 | 0.4019 | -0.0658 | Rejected (Degrades Ordinary) |
+| **`Comparison_MovingAvg4`** | `Baseline_MovingAvg4` | 0.4093 | 0.3796 | +0.0297 | 0.5120 | +0.0828 | 0.3533 | -0.0200 | Benchmark |
+
+#### E. Key Empirical Findings & Insights
+
+1. **Targeted Calibration Beats Blind Global Adjustment**:
+   Applying a flat seasonal adjustment year-round (Candidate B) degrades performance during ordinary calendar periods (ordinary score jumps from 0.3696 to 0.4019; bias plunges to -6.58%). In contrast, **Candidate D (Post-Holiday Targeted)** applies adjustments strictly to weeks 1..13, reducing post-holiday score from 0.4608 to 0.4207 while remaining strictly neutral (0.3696) during ordinary periods.
+2. **Empirical Bayes Shrinkage Dampens Client Variance**:
+   Vendors exhibit heterogeneous drops ranging from -30% to minor growth. Shrunk factors with volume smoothing ($k=100.0$) prevent small, erratic vendors from receiving destabilizing multipliers while preserving genuine calibration for high-volume accounts.
+3. **Safety Bounding & Robust Fallbacks**:
+   Clamping multipliers to $[0.50, 1.25]$ ensures catastrophic demand crashes or supply shocks cannot zero out inventory replenishment orders.
+
+#### F. Research Figures
+
+##### Post-Holiday vs. Ordinary Calendar Period Performance
+![Seasonal Diagnostics](reports/vn1/figures/seasonality_diagnostics.png)
+
+##### Calibrated Forecaster vs. Baselines (Overall Score & Bias)
+![Calibration vs Baseline](reports/vn1/figures/calibration_vs_baseline.png)
+
+##### 13-Week Horizon Error Dynamics
+![Horizon Error Dynamics](reports/vn1/figures/forecast_errors_by_horizon.png)
 
 ---
 

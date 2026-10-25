@@ -1,0 +1,29 @@
+vn1_score,wape,mae,rmse,smape,bias,relative_bias,candidate_key,model_name,origin_date,origin_label,origin_category,series_count,sample_count
+0.4149,0.3469,137.5293,310.3966,37.0035,26.9627,0.068,Candidate_A_Unadjusted,Baseline_MovingAvg12_Unadjusted,2022-01-03,Post-Holiday Q1 2022,post_holiday,250,3250
+0.4119,0.3463,137.2874,309.586,36.9954,26.0152,0.0656,Candidate_B_GlobalFactor,Baseline_MovingAvg12_GlobalFactor,2022-01-03,Post-Holiday Q1 2022,post_holiday,250,3250
+0.3847,0.3357,133.1067,308.0374,36.6929,19.3948,0.0489,Candidate_C_ShrunkClient,Baseline_MovingAvg12_ShrunkClient,2022-01-03,Post-Holiday Q1 2022,post_holiday,250,3250
+0.3868,0.3364,133.3755,307.8986,36.7166,19.977,0.0504,Candidate_D_PostHolidayTargeted,Baseline_MovingAvg12_PostHolidayTargeted,2022-01-03,Post-Holiday Q1 2022,post_holiday,250,3250
+0.3669,0.3288,130.3632,298.1872,36.3879,15.1114,0.0381,Candidate_E_PriceCalibrated,Baseline_MovingAvg12_PriceCalibrated,2022-01-03,Post-Holiday Q1 2022,post_holiday,250,3250
+0.4543,0.3781,149.9165,345.0777,37.8049,30.1887,0.0761,Comparison_MovingAvg4,Baseline_MovingAvg4,2022-01-03,Post-Holiday Q1 2022,post_holiday,250,3250
+0.2964,0.2792,110.6994,244.8604,32.4649,6.8077,0.0172,Comparison_Naive,Baseline_Naive,2022-01-03,Post-Holiday Q1 2022,post_holiday,250,3250
+0.4988,0.4485,214.6193,469.6327,45.8145,24.0719,0.0503,Candidate_A_Unadjusted,Baseline_MovingAvg12_Unadjusted,2023-01-02,Post-Holiday Q1 2023,post_holiday,250,3250
+0.46,0.4443,212.6407,463.4134,45.6395,7.5059,0.0157,Candidate_B_GlobalFactor,Baseline_MovingAvg12_GlobalFactor,2023-01-02,Post-Holiday Q1 2023,post_holiday,250,3250
+0.4462,0.3947,188.885,424.2009,43.6968,24.6435,0.0515,Candidate_C_ShrunkClient,Baseline_MovingAvg12_ShrunkClient,2023-01-02,Post-Holiday Q1 2023,post_holiday,250,3250
+0.4488,0.3974,190.1962,428.0507,43.6889,24.5996,0.0514,Candidate_D_PostHolidayTargeted,Baseline_MovingAvg12_PostHolidayTargeted,2023-01-02,Post-Holiday Q1 2023,post_holiday,250,3250
+0.4096,0.3831,183.3539,416.0635,43.0889,12.6742,0.0265,Candidate_E_PriceCalibrated,Baseline_MovingAvg12_PriceCalibrated,2023-01-02,Post-Holiday Q1 2023,post_holiday,250,3250
+0.5598,0.4714,225.6192,530.9677,46.8978,42.2749,0.0883,Comparison_MovingAvg4,Baseline_MovingAvg4,2023-01-02,Post-Holiday Q1 2023,post_holiday,250,3250
+0.5197,0.3894,186.3434,453.7828,41.5345,62.3729,0.1303,Comparison_Naive,Baseline_Naive,2023-01-02,Post-Holiday Q1 2023,post_holiday,250,3250
+0.4206,0.3734,165.6873,374.5303,43.6755,-20.9206,-0.0471,Candidate_A_Unadjusted,Baseline_MovingAvg12_Unadjusted,2022-07-04,Ordinary Mid-Year Q3 2022,ordinary,250,3250
+0.4488,0.3703,164.2885,372.7458,43.7003,-34.8552,-0.0786,Candidate_B_GlobalFactor,Baseline_MovingAvg12_GlobalFactor,2022-07-04,Ordinary Mid-Year Q3 2022,ordinary,250,3250
+0.4154,0.3619,160.5638,367.9977,43.6982,-23.7719,-0.0536,Candidate_C_ShrunkClient,Baseline_MovingAvg12_ShrunkClient,2022-07-04,Ordinary Mid-Year Q3 2022,ordinary,250,3250
+0.4206,0.3734,165.6873,374.5303,43.6755,-20.9206,-0.0471,Candidate_D_PostHolidayTargeted,Baseline_MovingAvg12_PostHolidayTargeted,2022-07-04,Ordinary Mid-Year Q3 2022,ordinary,250,3250
+0.4166,0.3617,160.4825,368.9234,43.5472,-24.3575,-0.0549,Candidate_E_PriceCalibrated,Baseline_MovingAvg12_PriceCalibrated,2022-07-04,Ordinary Mid-Year Q3 2022,ordinary,250,3250
+0.4022,0.387,171.7363,456.7945,41.7379,-6.7089,-0.0151,Comparison_MovingAvg4,Baseline_MovingAvg4,2022-07-04,Ordinary Mid-Year Q3 2022,ordinary,250,3250
+0.4106,0.3585,159.0745,510.5433,37.7277,-23.1009,-0.0521,Comparison_Naive,Baseline_Naive,2022-07-04,Ordinary Mid-Year Q3 2022,ordinary,250,3250
+0.3237,0.3067,151.282,288.6268,41.8304,-8.3931,-0.017,Candidate_A_Unadjusted,Baseline_MovingAvg12_Unadjusted,2023-04-03,Ordinary Spring Q2 2023,ordinary,250,3250
+0.3597,0.3054,150.6597,293.658,41.5218,-26.7873,-0.0543,Candidate_B_GlobalFactor,Baseline_MovingAvg12_GlobalFactor,2023-04-03,Ordinary Spring Q2 2023,ordinary,250,3250
+0.3439,0.3271,161.3511,302.3023,42.1682,8.2796,0.0168,Candidate_C_ShrunkClient,Baseline_MovingAvg12_ShrunkClient,2023-04-03,Ordinary Spring Q2 2023,ordinary,250,3250
+0.3237,0.3067,151.282,288.6268,41.8304,-8.3931,-0.017,Candidate_D_PostHolidayTargeted,Baseline_MovingAvg12_PostHolidayTargeted,2023-04-03,Ordinary Spring Q2 2023,ordinary,250,3250
+0.339,0.3249,160.2775,299.1724,42.068,6.9638,0.0141,Candidate_E_PriceCalibrated,Baseline_MovingAvg12_PriceCalibrated,2023-04-03,Ordinary Spring Q2 2023,ordinary,250,3250
+0.3094,0.2851,140.6305,278.5922,40.5995,-11.9998,-0.0243,Comparison_MovingAvg4,Baseline_MovingAvg4,2023-04-03,Ordinary Spring Q2 2023,ordinary,250,3250
+0.3148,0.2862,141.1723,262.5414,40.6065,-14.1108,-0.0286,Comparison_Naive,Baseline_Naive,2023-04-03,Ordinary Spring Q2 2023,ordinary,250,3250
