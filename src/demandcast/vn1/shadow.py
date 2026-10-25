@@ -6,8 +6,11 @@ isolates candidate failures from production, and reconciles delayed actuals with
 overwriting historical predictions.
 """
 
+from __future__ import annotations
+
 import json
 import logging
+import os
 import sqlite3
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -91,16 +94,97 @@ class ShadowPilotConfig:
     """Governs prospective live shadow pilot configuration, candidate registration, and safeguards."""
 
     pilot_name: str = "VN1_Challenger_Live_Shadow_Pilot"
-    version: str = "v2.2.8"
+    version: str = "v2.2.9"
     active_production_model: str = "Baseline_MovingAvg12_Official"
     challenger_c_model: str = "PreOrigin_Evidence_Gated_Calibrated"
     challenger_d_model: str = "Baseline_MovingAvg12_PostHolidayTargeted"
-    is_active: bool = False  # Inactive until external live feed is genuinely configured
+    is_active: bool = False  # Inactive by default per governance
     provider_id: str = "NOT_CONFIGURED"
     provider_status: str = "NOT_CONFIGURED"
     max_segment_degradation: float = 0.0100  # Max tolerated tier degradation (+1.0% VN1 score)
     promotion_policy: str = "MANUAL_SIGN_OFF_REQUIRED"  # Zero automatic promotion
     eligibility_gate_config: CalibrationGateConfig = field(default_factory=CalibrationGateConfig)
+    operator_sign_off_by: str | None = None
+    operator_sign_off_date: str | None = None
+    activation_mechanism: str = "DEFAULT_INACTIVE"
+
+    def __post_init__(self):
+        # Configuration-based operator activation path
+        if not self.is_active:
+            env_val = os.environ.get("DEMANDCAST_SHADOW_PILOT_ACTIVE", "").strip().lower()
+            if env_val in ("true", "1", "yes"):
+                self.is_active = True
+                self.activation_mechanism = "ENVIRONMENT_VARIABLE"
+                if not self.operator_sign_off_by:
+                    self.operator_sign_off_by = os.environ.get("DEMANDCAST_OPERATOR_SIGN_OFF_BY", "env_operator")
+                if not self.operator_sign_off_date:
+                    self.operator_sign_off_date = datetime.now(timezone.utc).isoformat()
+
+    @classmethod
+    def from_operator_environment(
+        cls,
+        authorize_override: bool = False,
+        operator_name: str | None = None,
+        config_path: Path | str | None = None,
+        **kwargs: Any,
+    ) -> ShadowPilotConfig:
+        """Construct ShadowPilotConfig checking explicit operator authorization pathways.
+
+        Priority order:
+        1. Explicit authorize_override (CLI flag)
+        2. Operator sign-off config file
+        3. Environment variable DEMANDCAST_SHADOW_PILOT_ACTIVE
+        4. Default: is_active = False (LOCKED_INACTIVE)
+        """
+        is_active = False
+        mechanism = "DEFAULT_INACTIVE"
+        sign_off_by = operator_name
+        sign_off_date = None
+
+        # 1. Config file check
+        cfg_file = None
+        if config_path:
+            cfg_file = Path(config_path)
+        else:
+            default_cfg = get_project_root() / "configs" / "vn1" / "pilot_activation.yaml"
+            if default_cfg.exists():
+                cfg_file = default_cfg
+
+        if cfg_file and cfg_file.exists():
+            try:
+                import yaml
+
+                data = yaml.safe_load(cfg_file.read_text(encoding="utf-8")) or {}
+                if data.get("is_active"):
+                    is_active = True
+                    mechanism = "OPERATOR_CONFIG_FILE"
+                    sign_off_by = data.get("operator_sign_off_by", sign_off_by)
+                    sign_off_date = data.get("operator_sign_off_date")
+            except Exception as e:
+                logger.warning(f"Failed to read operator pilot config {cfg_file}: {e}")
+
+        # 2. Environment variable check
+        env_val = os.environ.get("DEMANDCAST_SHADOW_PILOT_ACTIVE", "").strip().lower()
+        if env_val in ("true", "1", "yes"):
+            is_active = True
+            mechanism = "ENVIRONMENT_VARIABLE"
+            sign_off_by = sign_off_by or os.environ.get("DEMANDCAST_OPERATOR_SIGN_OFF_BY", "env_operator")
+            sign_off_date = sign_off_date or datetime.now(timezone.utc).isoformat()
+
+        # 3. Explicit CLI authorization override
+        if authorize_override:
+            is_active = True
+            mechanism = "CLI_OPERATOR_SIGN_OFF"
+            sign_off_by = sign_off_by or os.environ.get("DEMANDCAST_OPERATOR_SIGN_OFF_BY", "cli_operator")
+            sign_off_date = datetime.now(timezone.utc).isoformat()
+
+        return cls(
+            is_active=is_active,
+            operator_sign_off_by=sign_off_by,
+            operator_sign_off_date=sign_off_date,
+            activation_mechanism=mechanism,
+            **kwargs,
+        )
 
     def evaluate_activation_gates(
         self,
@@ -129,7 +213,9 @@ class ShadowPilotConfig:
         else:
             if not self.is_active:
                 reasons.append(
-                    "Gate 1 (Operator Authorization) FAILED: Pilot is marked inactive (is_active=False). Deliberate operator authorization required."
+                    "Gate 1 (Operator Authorization) FAILED: Pilot is marked inactive (is_active=False). "
+                    "Deliberate operator authorization required via DEMANDCAST_SHADOW_PILOT_ACTIVE=true, "
+                    "operator configuration file, or --authorize-pilot CLI option."
                 )
             if self.promotion_policy != "MANUAL_SIGN_OFF_REQUIRED":
                 reasons.append(
@@ -261,6 +347,9 @@ class ShadowPilotConfig:
             "pilot_name": self.pilot_name,
             "version": self.version,
             "is_active": self.is_active,
+            "activation_mechanism": self.activation_mechanism,
+            "operator_sign_off_by": self.operator_sign_off_by,
+            "operator_sign_off_date": self.operator_sign_off_date,
             "provider_id": self.provider_id,
             "provider_status": self.provider_status,
             "active_production_model": self.active_production_model,
@@ -282,7 +371,7 @@ class ShadowPilotConfig:
             "segment_safety_limit": self.max_segment_degradation,
             "gate_volume_floor": self.eligibility_gate_config.min_trailing_12w_volume,
             "gate_zero_fraction_ceiling": self.eligibility_gate_config.max_zero_demand_fraction,
-            "pilot_readiness": "READY_FOR_PROSPECTIVE_FEED_INACTIVE",
+            "pilot_readiness": "AUTHORIZED_BY_OPERATOR" if self.is_active else "READY_FOR_PROSPECTIVE_FEED_INACTIVE",
         }
 
 

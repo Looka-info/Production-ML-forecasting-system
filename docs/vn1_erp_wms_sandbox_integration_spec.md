@@ -189,6 +189,8 @@ python scripts/run_vn1_shadow.py preflight
 
 ## 7. IT Prerequisites & Hand-off Checklist for Enterprise ERP/WMS Team
 
+For the standalone executive checklist, refer directly to [`docs/vn1_enterprise_it_handoff_checklist.md`](file:///C:/Users/mumer/OneDrive/Documents/Production%20ML%20forecasting%20system/docs/vn1_enterprise_it_handoff_checklist.md).
+
 To activate prospective shadow forecasting with an enterprise partner, the enterprise IT team must provide and verify the following items:
 
 - [ ] **1. Sandbox Endpoint Provisioning**:

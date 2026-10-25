@@ -146,12 +146,25 @@ python scripts/run_vn1_shadow.py forecast \
 ```
 
 ### Mode 2: Prospective Live (Approved Operator Activation Only)
-When an upstream live provider has passed preflight and formal operator sign-off is granted:
-```bash
-python scripts/run_vn1_shadow.py forecast \
-  --mode prospective_live \
-  --candidates candidate_c candidate_d
-```
+When an upstream live provider has passed preflight and formal operator sign-off is granted, prospective live execution requires passing all 6 activation gates. The operator can authorize activation via:
+
+1. **CLI Flag & Operator Sign-Off**:
+   ```bash
+   python scripts/run_vn1_shadow.py forecast \
+     --mode prospective_live \
+     --candidates candidate_c candidate_d \
+     --authorize-pilot \
+     --operator-sign-off "lead_mlops_engineer"
+   ```
+2. **Environment Variable Configuration**:
+   ```bash
+   export DEMANDCAST_SHADOW_PILOT_ACTIVE="true"
+   export DEMANDCAST_OPERATOR_SIGN_OFF_BY="lead_mlops_engineer"
+   ```
+3. **Operator Sign-Off Configuration File**:
+   Specify `--pilot-config configs/vn1/pilot_activation.yaml` containing `is_active: true` and sign-off details.
+
+*Important Governance Safeguard: Even when operator authorization is provided, if any of the remaining 5 gates fail (e.g., provider offline, incomplete weekly buckets, store error), the pipeline terminates immediately fail-closed.*
 
 ### Partial Failure Isolation
 The pipeline isolates model failures independently:

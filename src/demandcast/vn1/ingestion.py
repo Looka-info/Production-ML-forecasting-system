@@ -700,7 +700,7 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
         headers = {
             "Authorization": f"Bearer {self._auth_token}",
             "Accept": "application/json",
-            "User-Agent": "DemandCast-ShadowPilot/v2.2.8",
+            "User-Agent": "DemandCast-ShadowPilot/v2.2.9",
         }
 
         session = http_session or requests.Session()
@@ -869,7 +869,7 @@ class ProspectiveStreamIngestionAdapter(BaseShadowIngestionAdapter):
             headers = {
                 "Authorization": f"Bearer {self._auth_token}",
                 "Accept": "application/json",
-                "User-Agent": "DemandCast-ShadowPilot/v2.2.8",
+                "User-Agent": "DemandCast-ShadowPilot/v2.2.9",
             }
             try:
                 resp = session.get(self.endpoint_url, headers=headers, timeout=self.timeout_seconds)

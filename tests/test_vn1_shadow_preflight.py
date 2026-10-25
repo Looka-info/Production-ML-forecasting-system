@@ -254,7 +254,7 @@ def test_08_preflight_all_checks_pass_returns_ready_but_remains_inactive(isolate
     assert res.pilot_activation_ready is False
     pilot = ShadowPilotConfig()
     assert pilot.is_active is False
-    assert pilot.version == "v2.2.8"
+    assert pilot.version == "v2.2.9"
     assert pilot.active_production_model == "Baseline_MovingAvg12_Official"
 
 
