@@ -6,7 +6,6 @@ isolates candidate failures from production, and reconciles delayed actuals with
 overwriting historical predictions.
 """
 
-import hashlib
 import json
 import logging
 import sqlite3
@@ -27,11 +26,13 @@ from demandcast.vn1.seasonal_calibration import (
     CalibratedForecaster,
     SeasonalCalibrationConfig,
 )
+from demandcast.vn1.time_contract import create_time_contract
 
 logger = logging.getLogger(__name__)
 
 ShadowRunStatus = Literal[
     "NOT_CONFIGURED",
+    "INCOMPLETE_INPUT_REJECTED",
     "READY",
     "RUNNING",
     "SUCCEEDED",
@@ -71,6 +72,8 @@ class ShadowForecastRecord:
     actual_source: str | None = None
     reconciliation_timestamp: str | None = None
     reconciliation_status: str = "PENDING_ACTUAL"  # 'PENDING_ACTUAL' | 'MATCHED' | 'CONFLICT_REJECTED'
+    as_of_timestamp: str | None = None
+    last_observed_week_start: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert record to dictionary."""
@@ -172,6 +175,18 @@ class ShadowStore:
                 )
             """)
 
+            # Column migrations for time-contract transparency
+            for tbl, col_def in [
+                ("shadow_runs", "as_of_timestamp TEXT"),
+                ("shadow_runs", "last_observed_week_start TEXT"),
+                ("shadow_forecasts", "as_of_timestamp TEXT"),
+                ("shadow_forecasts", "last_observed_week_start TEXT"),
+            ]:
+                try:
+                    cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN {col_def}")
+                except Exception:
+                    pass
+
             # Indexes for fast lookup and reconciliation
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_forecasts_lookup ON shadow_forecasts (series_id, target_week, reconciliation_status)"
@@ -199,6 +214,8 @@ class ShadowStore:
             "forecasts_count",
             "awaiting_actuals_count",
             "error_message",
+            "as_of_timestamp",
+            "last_observed_week_start",
         ]
         placeholders = ", ".join(["?"] * len(cols))
         vals = [run_dict.get(c) for c in cols]
@@ -241,6 +258,8 @@ class ShadowStore:
             "actual_source",
             "reconciliation_timestamp",
             "reconciliation_status",
+            "as_of_timestamp",
+            "last_observed_week_start",
         ]
         placeholders = ", ".join(["?"] * len(cols))
         # INSERT OR IGNORE respects the UNIQUE constraint on (snapshot_hash, origin_date, target_week, series_id, model_identifier)
@@ -518,12 +537,13 @@ class VN1ShadowPipeline:
         series_subset: int | None = None,
         provider: str = "file_batch",
         mode: Literal["historical_replay", "prospective_live"] = "historical_replay",
+        as_of_timestamp: str | datetime | None = None,
     ) -> dict[str, Any]:
         """Execute shadow inference across production model and experimental Candidate D.
 
         Points-in-time correctness:
-        - Evaluates both models strictly on history <= origin_date.
-        - Hashes snapshot for reproducibility and idempotency.
+        - Evaluates both models strictly on history <= origin_date under the time contract.
+        - Hashes eligible snapshot for reproducibility and idempotency.
         - Completely isolates candidate failures from production forecasts.
         """
         run_id = str(uuid.uuid4())
@@ -569,37 +589,46 @@ class VN1ShadowPipeline:
 
             df = parse_wide_to_long(df, value_name="sales", phase=0)
 
-        # Validate required columns
-        required_cols = {"series_id", "week_start", "sales"}
-        if not required_cols.issubset(set(df.columns)):
-            raise ValueError(f"Snapshot missing required columns: {required_cols - set(df.columns)}")
-
-        # Clean and sort dates
-        df["week_start"] = pd.to_datetime(df["week_start"])
-        if not (df["week_start"].dt.day_of_week == 0).all():
-            raise ValueError("All snapshot week_start dates must conform strictly to Monday convention.")
-
-        # Compute deterministic snapshot hash
-        sorted_bytes = (
-            df[["series_id", "week_start", "sales"]]
-            .sort_values(["series_id", "week_start"])
-            .to_csv(index=False)
-            .encode("utf-8")
-        )
-        snapshot_hash = hashlib.sha256(sorted_bytes).hexdigest()
-
-        # Determine origin date
+        # Determine origin date (last_observed_week_start)
         if origin_date is None:
-            origin_date = df["week_start"].max()
+            if "week_start" in df.columns:
+                origin_date = pd.to_datetime(df["week_start"]).max()
+            else:
+                origin_date = pd.to_datetime("2023-01-02")
         else:
             origin_date = pd.to_datetime(origin_date)
 
-        # Enforce point-in-time boundary: drop any rows > origin_date to prevent lookahead
-        history_df = df[df["week_start"] <= origin_date].copy()
-        if history_df.empty:
-            raise ValueError(
-                f"No observations remain strictly on or before origin_date {origin_date.strftime('%Y-%m-%d')}."
-            )
+        # Build and validate Time Contract
+        contract = create_time_contract(
+            origin_date=origin_date,
+            as_of_timestamp=as_of_timestamp,
+            horizon=horizon,
+            mode=mode,
+        )
+
+        try:
+            history_df, time_audit = contract.validate_snapshot(df)
+        except ValueError as e:
+            if mode == "prospective_live" and (
+                "fail-closed" in str(e).lower() or "incomplete" in str(e).lower() or "violation" in str(e).lower()
+            ):
+                logger.warning(f"Time contract validation rejected live snapshot: {e}")
+                return {
+                    "run_id": run_id,
+                    "status": "INCOMPLETE_INPUT_REJECTED",
+                    "message": str(e),
+                    "forecasts_count": 0,
+                    "time_contract": {
+                        "mode": mode,
+                        "origin_date": origin_date.strftime("%Y-%m-%d"),
+                        "as_of_timestamp": contract.as_of_timestamp,
+                    },
+                }
+            raise
+
+        snapshot_hash = time_audit["eligible_snapshot_hash"]
+        as_of_str = contract.as_of_timestamp
+        orig_str = contract.last_observed_week_start.strftime("%Y-%m-%d")
 
         # Optional subset filtering for fast execution
         if series_subset is not None and series_subset > 0:
@@ -609,11 +638,10 @@ class VN1ShadowPipeline:
             history_df = history_df[history_df["series_id"].isin(top_series)].copy()
 
         series_count = history_df["series_id"].nunique()
-        orig_str = origin_date.strftime("%Y-%m-%d")
 
         logger.info(
             f"Starting VN1 shadow run {run_id} [Mode: {mode}, Provider: {provider}] "
-            f"Origin: {orig_str}, Series: {series_count}, Horizon: {horizon}"
+            f"Origin (Last Observed): {orig_str}, As-Of: {as_of_str}, Series: {series_count}, Horizon: {horizon}"
         )
 
         # 2. Resolve Active Production Model
@@ -666,6 +694,8 @@ class VN1ShadowPipeline:
                     calibration_metadata=None,
                     execution_timestamp=created_at,
                     forecast_status="SUCCESS",
+                    as_of_timestamp=as_of_str,
+                    last_observed_week_start=orig_str,
                 )
                 prod_records.append(rec)
 
@@ -738,6 +768,8 @@ class VN1ShadowPipeline:
                     calibration_metadata=cand_telemetry_json,
                     execution_timestamp=created_at,
                     forecast_status="SUCCESS",
+                    as_of_timestamp=as_of_str,
+                    last_observed_week_start=orig_str,
                 )
                 cand_records.append(rec)
 
@@ -777,6 +809,8 @@ class VN1ShadowPipeline:
             "forecasts_count": len(all_records),
             "awaiting_actuals_count": len(all_records),
             "error_message": prod_error or cand_error,
+            "as_of_timestamp": as_of_str,
+            "last_observed_week_start": orig_str,
         }
         self.store.record_run(run_meta)
 
@@ -805,6 +839,7 @@ class VN1ShadowPipeline:
             },
             "persistence": save_res,
             "timestamp": created_at,
+            "time_contract": time_audit,
         }
 
 

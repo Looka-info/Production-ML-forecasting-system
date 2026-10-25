@@ -1,0 +1,92 @@
+{
+  "audit_name": "Forecast-Origin Weekly Boundary and Availability Semantics Audit",
+  "dataset_source": "data/vn1/raw/Phase 0 - Sales.csv",
+  "source_checksum_sha256": "034f50f7338c08cf1bb6facf8c5b36290f3e74d2e69db83099702d2a52f6534a",
+  "week_boundary_convention": "W-MON [Monday 00:00:00 to Sunday 23:59:59.999999]",
+  "accounting_bucket_completeness": "Every column header represents a fully closed 7-day sales aggregation.",
+  "origins_audited": [
+    {
+      "origin_date": "2022-01-03",
+      "origin_label": "Post-Holiday Q1 2022",
+      "origin_category": "post_holiday",
+      "last_observed_week_start": "2022-01-03",
+      "origin_iso_year": 2022,
+      "origin_iso_week": 1,
+      "history_weeks_count": 79,
+      "history_start_date": "2020-07-06",
+      "history_end_date": "2022-01-03",
+      "forward_horizon_weeks_count": 13,
+      "forward_start_date": "2022-01-10",
+      "forward_end_date": "2022-04-04",
+      "post_holiday_target_steps_count": 12,
+      "ordinary_target_steps_count": 1,
+      "prior_transitions_observed": [
+        "2021-01-04"
+      ],
+      "transitions_used_for_calibration": 1
+    },
+    {
+      "origin_date": "2022-07-04",
+      "origin_label": "Ordinary Mid-Year Q3 2022",
+      "origin_category": "ordinary",
+      "last_observed_week_start": "2022-07-04",
+      "origin_iso_year": 2022,
+      "origin_iso_week": 27,
+      "history_weeks_count": 105,
+      "history_start_date": "2020-07-06",
+      "history_end_date": "2022-07-04",
+      "forward_horizon_weeks_count": 13,
+      "forward_start_date": "2022-07-11",
+      "forward_end_date": "2022-10-03",
+      "post_holiday_target_steps_count": 0,
+      "ordinary_target_steps_count": 13,
+      "prior_transitions_observed": [
+        "2021-01-04",
+        "2022-01-03"
+      ],
+      "transitions_used_for_calibration": 2
+    },
+    {
+      "origin_date": "2023-01-02",
+      "origin_label": "Post-Holiday Q1 2023",
+      "origin_category": "post_holiday",
+      "last_observed_week_start": "2023-01-02",
+      "origin_iso_year": 2023,
+      "origin_iso_week": 1,
+      "history_weeks_count": 131,
+      "history_start_date": "2020-07-06",
+      "history_end_date": "2023-01-02",
+      "forward_horizon_weeks_count": 13,
+      "forward_start_date": "2023-01-09",
+      "forward_end_date": "2023-04-03",
+      "post_holiday_target_steps_count": 12,
+      "ordinary_target_steps_count": 1,
+      "prior_transitions_observed": [
+        "2021-01-04",
+        "2022-01-03"
+      ],
+      "transitions_used_for_calibration": 2
+    },
+    {
+      "origin_date": "2023-04-03",
+      "origin_label": "Ordinary Spring Q2 2023",
+      "origin_category": "ordinary",
+      "last_observed_week_start": "2023-04-03",
+      "origin_iso_year": 2023,
+      "origin_iso_week": 14,
+      "history_weeks_count": 144,
+      "history_start_date": "2020-07-06",
+      "history_end_date": "2023-04-03",
+      "forward_horizon_weeks_count": 13,
+      "forward_start_date": "2023-04-10",
+      "forward_end_date": "2023-07-03",
+      "post_holiday_target_steps_count": 0,
+      "ordinary_target_steps_count": 13,
+      "prior_transitions_observed": [
+        "2021-01-04",
+        "2022-01-03"
+      ],
+      "transitions_used_for_calibration": 2
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+segmentation_type,segment_name,series_count,total_sample_count,production_vn1_score,candidate_d_vn1_score,delta_vn1_score,production_wape,candidate_d_wape,delta_wape,production_mae,candidate_d_mae,production_relative_bias,candidate_d_relative_bias
+Volume_Tier,High,100,5200,0.4061,0.4223,0.0162,0.3568,0.3605,0.0037,40.2645,40.6774,-0.0493,-0.0619
+Volume_Tier,Low,45,2340,0.7878,0.8027,0.0149,0.6914,0.6948,0.0034,0.7036,0.707,-0.0964,-0.1079
+Volume_Tier,Medium,105,5460,0.7803,0.7905,0.0102,0.7207,0.7165,-0.0042,2.6411,2.6257,-0.0596,-0.074
+Intermittency_Tier,Intermittent,60,3120,0.9908,0.9627,-0.0281,0.8042,0.7953,-0.0089,12.4552,12.3173,0.1866,0.1674
+Intermittency_Tier,Smooth,80,4160,0.399,0.4162,0.0172,0.3141,0.3198,0.0057,37.0903,37.7668,-0.085,-0.0964
+Intermittency_Tier,Sparse,110,5720,0.4982,0.477,-0.0212,0.464,0.4595,-0.0045,5.6445,5.5897,0.0342,0.0175
+Combined_Stratum,High_Intermittent,25,1300,0.996,0.9674,-0.0286,0.802,0.7927,-0.0093,27.5001,27.1825,0.1941,0.1747
+Combined_Stratum,High_Smooth,55,2860,0.3972,0.4144,0.0172,0.311,0.3168,0.0058,53.0458,54.0337,-0.0862,-0.0976
+Combined_Stratum,High_Sparse,20,1040,0.4855,0.4629,-0.0226,0.4028,0.3979,-0.0049,21.0715,20.8161,0.0827,0.065
+Combined_Stratum,Low_Sparse,45,2340,0.7878,0.8027,0.0149,0.6914,0.6948,0.0034,0.7036,0.707,-0.0964,-0.1079
+Combined_Stratum,Medium_Intermittent,35,1820,0.9282,0.9067,-0.0215,0.8307,0.826,-0.0047,1.7088,1.6992,0.0975,0.0806
+Combined_Stratum,Medium_Smooth,25,1300,0.8414,0.822,-0.0194,0.7446,0.7415,-0.0031,1.9881,1.9798,0.0968,0.0805
+Combined_Stratum,Medium_Sparse,45,2340,0.83,0.8389,0.0089,0.682,0.6777,-0.0043,3.7291,3.7051,-0.148,-0.1612

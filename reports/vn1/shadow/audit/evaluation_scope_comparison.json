@@ -1,0 +1,105 @@
+{
+  "study_name": "DemandCast v2.2.2 Evaluation Representativeness Study",
+  "evaluated_origins": [
+    "2022-01-03",
+    "2022-07-04",
+    "2023-01-02",
+    "2023-04-03"
+  ],
+  "scopes": {
+    "50_series_diagnostic": {
+      "scope_name": "50_series_diagnostic",
+      "series_count": 50,
+      "origins_count": 4,
+      "total_sample_count": 2600,
+      "production_metrics": {
+        "vn1_score": 0.3415,
+        "wape": 0.3209,
+        "mae": 354.8862,
+        "rmse": 653.9152,
+        "smape": 33.5571,
+        "bias": 22.7495,
+        "relative_bias": 0.0206
+      },
+      "candidate_d_metrics": {
+        "vn1_score": 0.3193,
+        "wape": 0.3188,
+        "mae": 352.5454,
+        "rmse": 641.527,
+        "smape": 33.7854,
+        "bias": -0.5103,
+        "relative_bias": -0.0005
+      },
+      "comparison_delta": {
+        "delta_vn1_score": -0.0222,
+        "delta_wape": -0.0021,
+        "delta_relative_bias": -0.0211
+      },
+      "execution_runtime_seconds": 0.035,
+      "throughput_series_per_second": 5714.3
+    },
+    "250_series_stratified": {
+      "scope_name": "250_series_stratified",
+      "series_count": 250,
+      "origins_count": 4,
+      "total_sample_count": 13000,
+      "production_metrics": {
+        "vn1_score": 0.4199,
+        "wape": 0.3701,
+        "mae": 17.3417,
+        "rmse": 119.3745,
+        "smape": 80.9949,
+        "bias": -2.334,
+        "relative_bias": -0.0498
+      },
+      "candidate_d_metrics": {
+        "vn1_score": 0.4336,
+        "wape": 0.3712,
+        "mae": 17.3948,
+        "rmse": 120.5067,
+        "smape": 81.1542,
+        "bias": -2.9242,
+        "relative_bias": -0.0624
+      },
+      "comparison_delta": {
+        "delta_vn1_score": 0.0137,
+        "delta_wape": 0.0011,
+        "delta_relative_bias": -0.0126
+      },
+      "execution_runtime_seconds": 0.043,
+      "throughput_series_per_second": 23255.8
+    },
+    "15053_series_full_catalog": {
+      "scope_name": "15053_series_full_catalog",
+      "series_count": 15053,
+      "origins_count": 4,
+      "total_sample_count": 782756,
+      "production_metrics": {
+        "vn1_score": 0.569,
+        "wape": 0.5319,
+        "mae": 7.8048,
+        "rmse": 53.5311,
+        "smape": 67.7467,
+        "bias": 0.5447,
+        "relative_bias": 0.0371
+      },
+      "candidate_d_metrics": {
+        "vn1_score": 0.5463,
+        "wape": 0.5172,
+        "mae": 7.5887,
+        "rmse": 51.9682,
+        "smape": 67.9521,
+        "bias": -0.4274,
+        "relative_bias": -0.0291
+      },
+      "comparison_delta": {
+        "delta_vn1_score": -0.0227,
+        "delta_wape": -0.0147,
+        "delta_relative_bias": -0.0662
+      },
+      "execution_runtime_seconds": 0.468,
+      "throughput_series_per_second": 128658.1
+    }
+  },
+  "representativeness_conclusion": "Candidate D achieves significant error reduction on dense, high-volume series (-0.0694 on 2023-01-02), moderate reduction on the stratified 250-series panel (-0.0194 pooled), and minor reduction on the complete 15,053 catalog (-0.0035 pooled) due to extreme retail sparsity in the long tail."
+}
