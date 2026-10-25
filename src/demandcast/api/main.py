@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from demandcast.api.dependencies import get_model_container
+from demandcast.api.dependencies import get_model_container, get_vn1_model_container
 from demandcast.api.routes import router
 
 logging.basicConfig(
@@ -19,17 +19,22 @@ logger = logging.getLogger("demandcast.api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan context manager: Load active model on startup."""
+    """Lifespan context manager: Load active UCI and VN1 models on startup."""
     logger.info("Initializing DemandCast Forecasting API...")
-    container = get_model_container()
-    loaded = container.load_promoted_model()
-    if loaded:
-        logger.info(f"DemandCast ready with active model version: {container.version}")
+    uci_container = get_model_container()
+    uci_loaded = uci_container.load_promoted_model()
+    if uci_loaded:
+        logger.info(f"DemandCast UCI profile ready with active model version: {uci_container.version}")
     else:
-        logger.warning(
-            "Service started without an active promoted model release. "
-            "Run training and promotion scripts to activate a model."
-        )
+        logger.warning("DemandCast UCI profile started without an active promoted model release.")
+
+    vn1_container = get_vn1_model_container()
+    vn1_loaded = vn1_container.load_promoted_model()
+    if vn1_loaded:
+        logger.info(f"DemandCast VN1 profile ready with active model version: {vn1_container.version}")
+    else:
+        logger.warning("DemandCast VN1 profile started without an active promoted model release.")
+
     yield
     logger.info("Shutting down DemandCast API...")
 

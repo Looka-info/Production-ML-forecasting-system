@@ -28,17 +28,21 @@ def load_forecaster_artifact(model_file: Path) -> Any:
         raise FileNotFoundError(f"Model artifact not found at {model_file}")
 
     import joblib
+
     bundle = joblib.load(model_file)
     if isinstance(bundle, dict):
         model_type = bundle.get("model_type", bundle.get("name", ""))
         if "MovingAverage" in model_type or "Baseline_MovingAvg" in model_type:
             from demandcast.baselines import MovingAverageForecaster
+
             return MovingAverageForecaster.load(model_file)
         elif "pipeline" in bundle or "HistGradientBoosting" in model_type or "DemandForecastModel" in model_type:
             from demandcast.models import DemandForecastModel
+
             return DemandForecastModel.load(model_file)
 
     from demandcast.models import DemandForecastModel
+
     return DemandForecastModel.load(model_file)
 
 
@@ -92,7 +96,8 @@ class ModelRegistry:
         q_alert = quality_alert or (
             f"Validation WAPE ({val_wape * 100:.2f}%) exceeds target threshold ({threshold * 100:.2f}%). "
             "Selected model is best evaluated candidate promoted under audited operational override."
-            if has_alert else None
+            if has_alert
+            else None
         )
         freshness = model_freshness or {
             "status": "stale_historical_dataset",
@@ -157,9 +162,7 @@ class ModelRegistry:
         actual_checksum = calculate_file_sha256(model_file)
 
         if expected_checksum != actual_checksum:
-            return False, (
-                f"Checksum mismatch: expected {expected_checksum}, calculated {actual_checksum}"
-            )
+            return False, (f"Checksum mismatch: expected {expected_checksum}, calculated {actual_checksum}")
 
         # Verify model can be deserialized and run a quick smoke test
         try:
@@ -212,7 +215,9 @@ class ModelRegistry:
         try:
             rel_dir_str = release_dir.relative_to(self.root).as_posix()
         except ValueError:
-            rel_dir_str = release_dir.as_posix() if hasattr(release_dir, "as_posix") else str(release_dir).replace("\\", "/")
+            rel_dir_str = (
+                release_dir.as_posix() if hasattr(release_dir, "as_posix") else str(release_dir).replace("\\", "/")
+            )
 
         q_status = quality_status or meta.get("quality_status", "ALERT" if has_alert else "HEALTHY")
         q_alert = quality_alert or meta.get("quality_alert")

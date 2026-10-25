@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BacktestOrigin:
     """Represents a single chronological forecast origin cutoff."""
+
     origin_index: int
     origin_date: pd.Timestamp
     train_end_date: pd.Timestamp
@@ -65,8 +66,7 @@ class ChronologicalBacktester:
         test_cutoff_idx = total_weeks - test_h - 1
         test_origin_date = pd.to_datetime(all_unique_weeks[test_cutoff_idx])
         test_forecast_dates = [
-            pd.to_datetime(all_unique_weeks[i])
-            for i in range(test_cutoff_idx + 1, test_cutoff_idx + 1 + test_h)
+            pd.to_datetime(all_unique_weeks[i]) for i in range(test_cutoff_idx + 1, test_cutoff_idx + 1 + test_h)
         ]
 
         test_origin = BacktestOrigin(
@@ -83,8 +83,7 @@ class ChronologicalBacktester:
             val_cutoff_idx = test_cutoff_idx - ((n_origins - i) * step)
             val_origin_date = pd.to_datetime(all_unique_weeks[val_cutoff_idx])
             val_forecast_dates = [
-                pd.to_datetime(all_unique_weeks[j])
-                for j in range(val_cutoff_idx + 1, val_cutoff_idx + 1 + h)
+                pd.to_datetime(all_unique_weeks[j]) for j in range(val_cutoff_idx + 1, val_cutoff_idx + 1 + h)
             ]
             val_origins.append(
                 BacktestOrigin(
@@ -111,7 +110,7 @@ class ChronologicalBacktester:
         for i in range(len(val_origins) - 1):
             assert val_origins[i].origin_date < val_origins[i + 1].origin_date, (
                 f"Validation origin {i} date {val_origins[i].origin_date} is not strictly "
-                f"before origin {i+1} date {val_origins[i+1].origin_date}"
+                f"before origin {i + 1} date {val_origins[i + 1].origin_date}"
             )
 
         # 2. Latest validation origin must be strictly before test origin
@@ -145,8 +144,7 @@ class ChronologicalBacktester:
 
         for origin in origins:
             logger.info(
-                f"Evaluating [{model_name}] at Origin #{origin.origin_index} "
-                f"(Cutoff: {origin.origin_date.date()})..."
+                f"Evaluating [{model_name}] at Origin #{origin.origin_index} (Cutoff: {origin.origin_date.date()})..."
             )
 
             # Training set: observations strictly <= origin_date
@@ -158,7 +156,9 @@ class ChronologicalBacktester:
                 forecaster = forecaster_factory_or_instance()
             elif hasattr(forecaster_factory_or_instance, "__class__"):
                 cls = forecaster_factory_or_instance.__class__
-                if hasattr(forecaster_factory_or_instance, "config") and hasattr(forecaster_factory_or_instance, "features_config"):
+                if hasattr(forecaster_factory_or_instance, "config") and hasattr(
+                    forecaster_factory_or_instance, "features_config"
+                ):
                     forecaster = cls(
                         model_config=forecaster_factory_or_instance.config,
                         features_config=forecaster_factory_or_instance.features_config,
@@ -204,9 +204,7 @@ class ChronologicalBacktester:
         # Merge with ground truth actuals
         merged = pd.merge(
             full_preds_df,
-            weekly_df[["series_id", "week_start", "demand"]].rename(
-                columns={"demand": "actual_demand"}
-            ),
+            weekly_df[["series_id", "week_start", "demand"]].rename(columns={"demand": "actual_demand"}),
             on=["series_id", "week_start"],
             how="inner",
         )

@@ -1,6 +1,5 @@
 """Tests for model release packaging, checksum verification, and registry operations."""
 
-
 from demandcast.config import RegistryConfig
 from demandcast.registry import ModelRegistry
 
@@ -63,6 +62,7 @@ def test_registry_package_with_quality_alert_and_freshness(trained_dummy_model, 
     )
 
     import json
+
     with open(rel_dir / "metadata.json", "r", encoding="utf-8") as f:
         meta = json.load(f)
 

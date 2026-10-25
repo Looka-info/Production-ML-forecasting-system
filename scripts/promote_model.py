@@ -38,14 +38,23 @@ def run_smoke_test(model: Any, version: str, training_cutoff: str | None = None)
         training_cutoff_date=training_cutoff,
     )
     assert len(res["forecasts"]) == 4, "Smoke test failed: Expected 4 forecast steps."
-    logger.info(f"Smoke test passed for SKU '{sample_sku}'. Forecast: {[f['predicted_demand'] for f in res['forecasts']]}")
+    logger.info(
+        f"Smoke test passed for SKU '{sample_sku}'. Forecast: {[f['predicted_demand'] for f in res['forecasts']]}"
+    )
 
 
 def main():
     parser = argparse.ArgumentParser(description="Promote a verified model release to active serving.")
     parser.add_argument("--version", type=str, required=True, help="Release version to promote (e.g. v1.0.0)")
-    parser.add_argument("--reason", type=str, default="", help="Audit reason for promotion. Required if overriding quality alerts.")
-    parser.add_argument("--allow-alert-override", action="store_true", default=False, help="Explicitly permit promotion of a candidate that exceeds quality alert thresholds.")
+    parser.add_argument(
+        "--reason", type=str, default="", help="Audit reason for promotion. Required if overriding quality alerts."
+    )
+    parser.add_argument(
+        "--allow-alert-override",
+        action="store_true",
+        default=False,
+        help="Explicitly permit promotion of a candidate that exceeds quality alert thresholds.",
+    )
     args = parser.parse_args()
 
     registry = ModelRegistry()
@@ -61,6 +70,7 @@ def main():
     model_file = registry.releases_dir / args.version / "model.joblib"
     meta_file = registry.releases_dir / args.version / "metadata.json"
     import json
+
     with open(meta_file, "r", encoding="utf-8") as f:
         meta = json.load(f)
     cutoff = meta.get("training_date_range", {}).get("max_date")

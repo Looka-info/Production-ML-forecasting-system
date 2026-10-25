@@ -194,4 +194,3 @@ def evaluate_forecast_dataframe(
         "by_horizon": by_horizon,
         "sample_size": len(merged),
     }
-

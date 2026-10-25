@@ -84,11 +84,13 @@ def download_dataset(
         for file_info in zip_ref.infolist():
             zip_ref.extract(file_info, extract_dir)
             extracted_path = extract_dir / file_info.filename
-            extracted_files.append({
-                "filename": file_info.filename,
-                "size_bytes": file_info.file_size,
-                "sha256": calculate_sha256(extracted_path) if extracted_path.is_file() else None,
-            })
+            extracted_files.append(
+                {
+                    "filename": file_info.filename,
+                    "size_bytes": file_info.file_size,
+                    "sha256": calculate_sha256(extracted_path) if extracted_path.is_file() else None,
+                }
+            )
 
     metadata["extracted_files"] = extracted_files
 
@@ -112,9 +114,7 @@ def load_raw_transactions(excel_path: Path | None = None) -> tuple[pd.DataFrame,
     path = excel_path or (root / config.data.raw_excel_path)
 
     if not path.exists():
-        raise FileNotFoundError(
-            f"Raw dataset file not found at {path}. Please run scripts/download_data.py first."
-        )
+        raise FileNotFoundError(f"Raw dataset file not found at {path}. Please run scripts/download_data.py first.")
 
     logger.info(f"Reading raw Excel file from {path} (both 2009-2010 and 2010-2011 sheets)...")
     xl = pd.ExcelFile(path)

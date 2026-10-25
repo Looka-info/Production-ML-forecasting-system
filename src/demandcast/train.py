@@ -31,9 +31,7 @@ def train_forecasting_model(
     if weekly_df is None:
         data_path = root / config.data.processed_weekly_path
         if not data_path.exists():
-            raise FileNotFoundError(
-                f"Processed weekly dataset not found at {data_path}. Run prepare_data.py first."
-            )
+            raise FileNotFoundError(f"Processed weekly dataset not found at {data_path}. Run prepare_data.py first.")
         weekly_df = pd.read_parquet(data_path)
 
     # Generate backtest origins to isolate the final held-out test horizon

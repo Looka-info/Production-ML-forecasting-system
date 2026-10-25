@@ -18,7 +18,9 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate stored forecasts against ground-truth actuals.")
     parser.add_argument("--model-name", type=str, default=None, help="Filter to specific model_name, or None for all.")
     parser.add_argument("--forecasts", type=str, default="reports/backtest_results.csv", help="Predictions CSV file.")
-    parser.add_argument("--actuals", type=str, default="data/processed/weekly_demand.parquet", help="Actuals data file.")
+    parser.add_argument(
+        "--actuals", type=str, default="data/processed/weekly_demand.parquet", help="Actuals data file."
+    )
     parser.add_argument("--output", type=str, default="reports/monitoring_report.json", help="Output report file.")
     args = parser.parse_args()
 

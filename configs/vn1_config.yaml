@@ -1,0 +1,75 @@
+# DemandCast v2 — VN1 Retail Forecasting Profile Configuration
+profile_name: "vn1"
+version: "1.0.0"
+
+data:
+  raw_dir: "data/vn1/raw"
+  phase0_sales_path: "data/vn1/raw/Phase 0 - Sales.csv"
+  phase0_price_path: "data/vn1/raw/Phase 0 - Price.csv"
+  phase1_sales_path: "data/vn1/raw/Phase 1 - Sales.csv"
+  phase1_price_path: "data/vn1/raw/Phase 1 - Price.csv"
+  interim_cube_path: "data/vn1/interim/cube.parquet"
+  processed_sales_path: "data/vn1/processed/weekly_sales.parquet"
+  processed_prices_path: "data/vn1/processed/weekly_prices.parquet"
+  quality_report_path: "reports/vn1/data_quality_report.json"
+  provenance_path: "data/vn1/raw/dataset_provenance.json"
+
+temporal:
+  frequency: "W-MON"
+  phase0_start: "2020-07-06"
+  phase0_end: "2023-10-02"
+  phase1_start: "2023-10-09"
+  phase1_end: "2024-01-01"
+  phase2_start: "2024-01-08"
+  phase2_end: "2024-04-01"
+
+forecasting:
+  horizon: 13
+  min_history_required: 12
+  nonnegative_clipping: true
+  supported_series_subset_for_dev: 250 # When running fast development mode; full run uses all
+
+features:
+  lags: [1, 2, 3, 4, 8, 12, 13]
+  rolling_windows: [4, 8, 12]
+  rolling_stats: ["mean", "std"]
+  zero_demand_window: 4
+  include_price_features: true
+  categorical_columns: ["client_id", "warehouse_id", "product_id"]
+
+validation:
+  validation_origin: "2023-10-02"
+  validation_horizon: 13
+  phase2_origin: "2024-01-01"
+  phase2_horizon: 13
+
+model:
+  type: "LightGBM"
+  params:
+    objective: "regression"
+    metric: "mae"
+    learning_rate: 0.05
+    num_leaves: 31
+    n_estimators: 120
+    min_child_samples: 15
+    random_state: 42
+    verbose: -1
+
+tracking:
+  experiment_name: "demandcast-vn1"
+  tracking_uri: "sqlite:///mlflow.db"
+  artifact_location: "./mlruns"
+
+registry:
+  releases_dir: "models/profiles/vn1/releases"
+  current_pointer: "models/profiles/vn1/current.json"
+
+governance:
+  primary_metric: "vn1_score"
+  target_gate_score: 0.70
+  allow_alert_promotion_override: false
+  training_cutoff_date: "2023-10-02"
+  dataset_vintage: "VN1 Forecasting Challenge (July 2020 - April 2024)"
+  dataset_doi: "10.5281/zenodo.23265413"
+  competition_url: "https://supchains.com/vn1-forecasting-competition/"
+  stale_model_threshold_days: 90

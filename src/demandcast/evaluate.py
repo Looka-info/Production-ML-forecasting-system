@@ -101,9 +101,7 @@ def generate_evaluation_figures(
         return (np.abs(g["actual_demand"] - g["predicted_demand"]).sum() / denom) if denom > 0 else 0.0
 
     horizon_wape = (
-        backtest_predictions_df.groupby(["model_name", "horizon_step"])
-        .apply(calc_group_wape)
-        .reset_index(name="wape")
+        backtest_predictions_df.groupby(["model_name", "horizon_step"]).apply(calc_group_wape).reset_index(name="wape")
     )
     sns.lineplot(
         data=horizon_wape,
@@ -125,9 +123,7 @@ def generate_evaluation_figures(
     generated_paths.append(fig2_path)
 
     # 3. Residual Error Distribution for ML Model
-    ml_preds = backtest_predictions_df[
-        backtest_predictions_df["model_name"] == "HistGradientBoosting"
-    ].copy()
+    ml_preds = backtest_predictions_df[backtest_predictions_df["model_name"] == "HistGradientBoosting"].copy()
     if len(ml_preds) > 0:
         ml_preds["residual"] = ml_preds["predicted_demand"] - ml_preds["actual_demand"]
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -190,19 +186,21 @@ def run_full_evaluation(
         all_val_preds.append(preds_df)
 
         ov = metrics_report.get("overall", {})
-        comparison_records.append({
-            "model_name": m_name,
-            "evaluation_stage": "validation_backtests",
-            "origins_count": len(val_origins),
-            "mae": ov.get("mae"),
-            "rmse": ov.get("rmse"),
-            "wape": ov.get("wape"),
-            "smape": ov.get("smape"),
-            "mase": ov.get("mase"),
-            "bias": ov.get("bias"),
-            "relative_bias": ov.get("relative_bias"),
-            "sample_count": metrics_report.get("sample_size"),
-        })
+        comparison_records.append(
+            {
+                "model_name": m_name,
+                "evaluation_stage": "validation_backtests",
+                "origins_count": len(val_origins),
+                "mae": ov.get("mae"),
+                "rmse": ov.get("rmse"),
+                "wape": ov.get("wape"),
+                "smape": ov.get("smape"),
+                "mase": ov.get("mase"),
+                "bias": ov.get("bias"),
+                "relative_bias": ov.get("relative_bias"),
+                "sample_count": metrics_report.get("sample_size"),
+            }
+        )
 
     # 2. Final untouched test horizon evaluation
     all_test_preds = []
@@ -216,19 +214,21 @@ def run_full_evaluation(
         )
         all_test_preds.append(preds_df)
         ov = test_metrics.get("overall", {})
-        comparison_records.append({
-            "model_name": m_name,
-            "evaluation_stage": "final_heldout_test",
-            "origins_count": 1,
-            "mae": ov.get("mae"),
-            "rmse": ov.get("rmse"),
-            "wape": ov.get("wape"),
-            "smape": ov.get("smape"),
-            "mase": ov.get("mase"),
-            "bias": ov.get("bias"),
-            "relative_bias": ov.get("relative_bias"),
-            "sample_count": test_metrics.get("sample_size"),
-        })
+        comparison_records.append(
+            {
+                "model_name": m_name,
+                "evaluation_stage": "final_heldout_test",
+                "origins_count": 1,
+                "mae": ov.get("mae"),
+                "rmse": ov.get("rmse"),
+                "wape": ov.get("wape"),
+                "smape": ov.get("smape"),
+                "mase": ov.get("mase"),
+                "bias": ov.get("bias"),
+                "relative_bias": ov.get("relative_bias"),
+                "sample_count": test_metrics.get("sample_size"),
+            }
+        )
 
     full_val_preds = pd.concat(all_val_preds, ignore_index=True)
     full_test_preds = pd.concat(all_test_preds, ignore_index=True)
@@ -260,14 +260,16 @@ def run_full_evaluation(
     }
 
     # Extract ML model validation metrics
-    ml_val = comparison_df[
-        (comparison_df["model_name"] == "HistGradientBoosting")
-        & (comparison_df["evaluation_stage"] == "validation_backtests")
-    ].iloc[0].to_dict()
+    ml_val = (
+        comparison_df[
+            (comparison_df["model_name"] == "HistGradientBoosting")
+            & (comparison_df["evaluation_stage"] == "validation_backtests")
+        ]
+        .iloc[0]
+        .to_dict()
+    )
 
-    ml_metrics = {
-        f"val_{k}": v for k, v in ml_val.items() if isinstance(v, (int, float)) and v is not None
-    }
+    ml_metrics = {f"val_{k}": v for k, v in ml_val.items() if isinstance(v, (int, float)) and v is not None}
 
     art_dict = {
         "model_comparison": comp_path,
@@ -287,10 +289,7 @@ def run_full_evaluation(
     summary = {
         "mlflow_run_id": run_id,
         "comparison": comparison_records,
-        "val_origins": [
-            {"index": o.origin_index, "date": str(o.origin_date.date())}
-            for o in val_origins
-        ],
+        "val_origins": [{"index": o.origin_index, "date": str(o.origin_date.date())} for o in val_origins],
         "test_origin": {"date": str(test_origin.origin_date.date())},
     }
 

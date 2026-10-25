@@ -24,9 +24,7 @@ def main():
     logger.info("Phase 1: Loading raw multi-sheet Excel transactions...")
     excel_path = root / config.data.raw_excel_path
     if not excel_path.exists():
-        logger.error(
-            f"Raw Excel file not found at {excel_path}. Please run 'python scripts/download_data.py' first."
-        )
+        logger.error(f"Raw Excel file not found at {excel_path}. Please run 'python scripts/download_data.py' first.")
         sys.exit(1)
 
     raw_df, load_info = load_raw_transactions(excel_path)

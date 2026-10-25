@@ -76,10 +76,12 @@ class DemandForecastModel(BaseForecaster):
             categorical_features=[0],  # the first column transformed is categorical
         )
 
-        pipeline = Pipeline([
-            ("preprocessor", preprocessor),
-            ("regressor", regressor),
-        ])
+        pipeline = Pipeline(
+            [
+                ("preprocessor", preprocessor),
+                ("regressor", regressor),
+            ]
+        )
         return pipeline
 
     def fit(self, training_weekly_df: pd.DataFrame) -> "DemandForecastModel":
@@ -125,9 +127,7 @@ class DemandForecastModel(BaseForecaster):
             raise RuntimeError("DemandForecastModel must be fitted before generating forecasts.")
 
         if series_id not in self.supported_series:
-            logger.warning(
-                f"Series {series_id} is not in fitted supported series: {self.supported_series}"
-            )
+            logger.warning(f"Series {series_id} is not in fitted supported series: {self.supported_series}")
 
         working_history = history_df.sort_values(by="week_start").copy()
         working_history["week_start"] = pd.to_datetime(working_history["week_start"])
@@ -170,20 +170,26 @@ class DemandForecastModel(BaseForecaster):
             # Post-processing: Demand is non-negative
             clipped_pred = max(0.0, float(raw_pred))
 
-            forecast_records.append({
-                "series_id": series_id,
-                "week_start": target_date,
-                "horizon_step": step,
-                "predicted_demand": clipped_pred,
-                "model_name": self.name,
-            })
+            forecast_records.append(
+                {
+                    "series_id": series_id,
+                    "week_start": target_date,
+                    "horizon_step": step,
+                    "predicted_demand": clipped_pred,
+                    "model_name": self.name,
+                }
+            )
 
             # Append prediction to working history for next recursive step
-            new_hist_row = pd.DataFrame([{
-                "series_id": series_id,
-                "week_start": target_date,
-                "demand": clipped_pred,
-            }])
+            new_hist_row = pd.DataFrame(
+                [
+                    {
+                        "series_id": series_id,
+                        "week_start": target_date,
+                        "demand": clipped_pred,
+                    }
+                ]
+            )
             working_history = pd.concat([working_history, new_hist_row], ignore_index=True)
 
         return pd.DataFrame(forecast_records)

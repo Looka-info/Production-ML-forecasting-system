@@ -42,21 +42,35 @@ data/interim/*
 data/processed/*
 !data/processed/.gitkeep
 
+data/vn1/raw/*
+!data/vn1/raw/.gitkeep
+!data/vn1/raw/dataset_provenance.json
+data/vn1/interim/*
+!data/vn1/interim/.gitkeep
+data/vn1/processed/*
+!data/vn1/processed/.gitkeep
+
 # MLflow
 mlruns/
 mlflow.db
 .trash/
 
 # Models and Releases
-# Ignore scratch releases, but track verified v1.0.0 production release and active pointer
+# Ignore scratch releases, but track verified v1.0.0 production releases and active pointers
 models/releases/*
 !models/releases/v1.0.0/
 !models/releases/.gitkeep
+models/profiles/vn1/releases/*
+!models/profiles/vn1/releases/v1.0.0/
+!models/profiles/vn1/releases/.gitkeep
 
 # Reports generated during backtesting (track publication figures, keep tabular metrics/reports)
 reports/figures/*
 !reports/figures/*.png
 !reports/figures/.gitkeep
+reports/vn1/figures/*
+!reports/vn1/figures/*.png
+!reports/vn1/figures/.gitkeep
 
 # Testing & Coverage
 .pytest_cache/

@@ -19,7 +19,9 @@ logger = logging.getLogger("train_model")
 
 def main():
     parser = argparse.ArgumentParser(description="Train, evaluate, and package DemandCast model releases.")
-    parser.add_argument("--candidate-version", type=str, default="v1.0.0-candidate-hgb", help="Candidate version string.")
+    parser.add_argument(
+        "--candidate-version", type=str, default="v1.0.0-candidate-hgb", help="Candidate version string."
+    )
     parser.add_argument("--prod-version", type=str, default="v1.0.0", help="Production release version string.")
     args = parser.parse_args()
 
@@ -41,15 +43,23 @@ def main():
     registry = ModelRegistry()
 
     # 2. Extract metrics for HistGradientBoosting candidate
-    ml_val_row = comparison_df[
-        (comparison_df["model_name"] == "HistGradientBoosting")
-        & (comparison_df["evaluation_stage"] == "validation_backtests")
-    ].iloc[0].to_dict()
+    ml_val_row = (
+        comparison_df[
+            (comparison_df["model_name"] == "HistGradientBoosting")
+            & (comparison_df["evaluation_stage"] == "validation_backtests")
+        ]
+        .iloc[0]
+        .to_dict()
+    )
 
-    ml_test_row = comparison_df[
-        (comparison_df["model_name"] == "HistGradientBoosting")
-        & (comparison_df["evaluation_stage"] == "final_heldout_test")
-    ].iloc[0].to_dict()
+    ml_test_row = (
+        comparison_df[
+            (comparison_df["model_name"] == "HistGradientBoosting")
+            & (comparison_df["evaluation_stage"] == "final_heldout_test")
+        ]
+        .iloc[0]
+        .to_dict()
+    )
 
     # Train final ML model instance
     logger.info("Training candidate HistGradientBoosting artifact...")
@@ -77,20 +87,30 @@ def main():
     best_model_name = best_model_row["model_name"]
     logger.info("=" * 60)
     logger.info("Model Selection Audit: Primary Metric = WAPE (Validation)")
-    logger.info(f"Winning Strategy: {best_model_name} (Validation WAPE: {best_model_row['wape']:.2%}, MASE: {best_model_row['mase']})")
+    logger.info(
+        f"Winning Strategy: {best_model_name} (Validation WAPE: {best_model_row['wape']:.2%}, MASE: {best_model_row['mase']})"
+    )
     logger.info(f"HistGradientBoosting: (Validation WAPE: {ml_val_row['wape']:.2%}, MASE: {ml_val_row['mase']})")
     logger.info("=" * 60)
 
     # Extract metrics for winning MovingAverage baseline
-    ma_val_row = comparison_df[
-        (comparison_df["model_name"] == "Baseline_MovingAvg4")
-        & (comparison_df["evaluation_stage"] == "validation_backtests")
-    ].iloc[0].to_dict()
+    ma_val_row = (
+        comparison_df[
+            (comparison_df["model_name"] == "Baseline_MovingAvg4")
+            & (comparison_df["evaluation_stage"] == "validation_backtests")
+        ]
+        .iloc[0]
+        .to_dict()
+    )
 
-    ma_test_row = comparison_df[
-        (comparison_df["model_name"] == "Baseline_MovingAvg4")
-        & (comparison_df["evaluation_stage"] == "final_heldout_test")
-    ].iloc[0].to_dict()
+    ma_test_row = (
+        comparison_df[
+            (comparison_df["model_name"] == "Baseline_MovingAvg4")
+            & (comparison_df["evaluation_stage"] == "final_heldout_test")
+        ]
+        .iloc[0]
+        .to_dict()
+    )
 
     # Package winning model as active production release
     prod_dir = registry.releases_dir / args.prod_version

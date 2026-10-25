@@ -64,21 +64,17 @@ def extract_features_single_series(
     # 2. Rolling statistics (strictly shift(1) to exclude current week t)
     shifted_demand = demand.shift(1)
     for window in config.rolling_windows:
-        feature_dict[f"rolling_mean_{window}"] = shifted_demand.rolling(
-            window, min_periods=max(2, window // 2)
-        ).mean()
+        feature_dict[f"rolling_mean_{window}"] = shifted_demand.rolling(window, min_periods=max(2, window // 2)).mean()
 
         if "std" in config.rolling_stats:
-            feature_dict[f"rolling_std_{window}"] = shifted_demand.rolling(
-                window, min_periods=max(2, window // 2)
-            ).std().fillna(0.0)
+            feature_dict[f"rolling_std_{window}"] = (
+                shifted_demand.rolling(window, min_periods=max(2, window // 2)).std().fillna(0.0)
+            )
 
     # 3. Recent zero-demand frequency
     z_win = config.zero_demand_window
     is_zero = (shifted_demand == 0.0).astype(float)
-    feature_dict[f"zero_freq_{z_win}"] = is_zero.rolling(
-        z_win, min_periods=max(1, z_win // 2)
-    ).mean()
+    feature_dict[f"zero_freq_{z_win}"] = is_zero.rolling(z_win, min_periods=max(1, z_win // 2)).mean()
 
     # 4. Calendar features
     cal_df = create_calendar_features(df["week_start"])
@@ -112,9 +108,7 @@ def extract_features_dataset(
     target_series_list = []
 
     for series_id, group in weekly_df.groupby("series_id"):
-        feat_df, target = extract_features_single_series(
-            str(series_id), group, features_config=config
-        )
+        feat_df, target = extract_features_single_series(str(series_id), group, features_config=config)
         feature_frames.append(feat_df)
         target_series_list.append(target)
 
@@ -161,11 +155,15 @@ def build_inference_features_for_step(
         )
 
     # Append a dummy row for the target week at the end
-    dummy_row = pd.DataFrame([{
-        "week_start": pd.to_datetime(target_week_start),
-        "demand": 0.0,
-        "series_id": series_id,
-    }])
+    dummy_row = pd.DataFrame(
+        [
+            {
+                "week_start": pd.to_datetime(target_week_start),
+                "demand": 0.0,
+                "series_id": series_id,
+            }
+        ]
+    )
     extended_df = pd.concat([history_df[["week_start", "demand"]], dummy_row], ignore_index=True)
 
     feat_df, _ = extract_features_single_series(

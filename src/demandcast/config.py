@@ -22,9 +22,7 @@ class CleaningConfig(BaseModel):
     min_unit_price: float = 0.001
     exclude_cancelled: bool = True
     non_merchandise_codes: list[str] = Field(
-        default_factory=lambda: [
-            "POST", "D", "M", "BANK CHARGES", "PADS", "DOT", "CRUK", "TEST", "ADJUST", "ADJUST2"
-        ]
+        default_factory=lambda: ["POST", "D", "M", "BANK CHARGES", "PADS", "DOT", "CRUK", "TEST", "ADJUST", "ADJUST2"]
     )
     week_start_day: str = "W-MON"
 
@@ -43,9 +41,7 @@ class FeaturesConfig(BaseModel):
     rolling_windows: list[int] = Field(default_factory=lambda: [4, 8, 12])
     rolling_stats: list[str] = Field(default_factory=lambda: ["mean", "std"])
     zero_demand_window: int = 4
-    calendar: list[str] = Field(
-        default_factory=lambda: ["week_of_year", "month", "sin_week", "cos_week"]
-    )
+    calendar: list[str] = Field(default_factory=lambda: ["week_of_year", "month", "sin_week", "cos_week"])
 
 
 class ForecastingConfig(BaseModel):

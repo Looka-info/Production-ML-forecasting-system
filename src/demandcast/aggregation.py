@@ -157,11 +157,7 @@ def aggregate_weekly_demand(
             df = df[df["week_start"] < final_week_monday].copy()
 
     # Sum positive sales quantity per series per week
-    weekly_agg = (
-        df.groupby(["series_id", "week_start"])
-        .agg(demand=("quantity", "sum"))
-        .reset_index()
-    )
+    weekly_agg = df.groupby(["series_id", "week_start"]).agg(demand=("quantity", "sum")).reset_index()
 
     # Establish common global continuous calendar grid across all series
     min_week = weekly_agg["week_start"].min()
@@ -173,10 +169,14 @@ def aggregate_weekly_demand(
     )
 
     skus = [str(s) for s in (selected_skus if selected_skus is not None else weekly_agg["series_id"].unique())]
-    grid = pd.MultiIndex.from_product(
-        [skus, all_weeks],
-        names=["series_id", "week_start"],
-    ).to_frame().reset_index(drop=True)
+    grid = (
+        pd.MultiIndex.from_product(
+            [skus, all_weeks],
+            names=["series_id", "week_start"],
+        )
+        .to_frame()
+        .reset_index(drop=True)
+    )
 
     grid["series_id"] = grid["series_id"].astype(str)
     grid["week_start"] = pd.to_datetime(grid["week_start"])
@@ -206,19 +206,21 @@ def generate_series_summary(weekly_df: pd.DataFrame) -> pd.DataFrame:
         min_demand = group["demand"].min()
         total_demand = group["demand"].sum()
 
-        summary_records.append({
-            "series_id": series_id,
-            "total_weeks": total_weeks,
-            "zero_weeks": int(zero_weeks),
-            "zero_percentage": round((zero_weeks / total_weeks) * 100, 2),
-            "mean_weekly_demand": round(float(mean_demand), 2),
-            "std_weekly_demand": round(float(std_demand), 2) if not np.isnan(std_demand) else 0.0,
-            "min_demand": float(min_demand),
-            "max_demand": float(max_demand),
-            "total_demand": float(total_demand),
-            "start_date": str(group["week_start"].min().date()),
-            "end_date": str(group["week_start"].max().date()),
-        })
+        summary_records.append(
+            {
+                "series_id": series_id,
+                "total_weeks": total_weeks,
+                "zero_weeks": int(zero_weeks),
+                "zero_percentage": round((zero_weeks / total_weeks) * 100, 2),
+                "mean_weekly_demand": round(float(mean_demand), 2),
+                "std_weekly_demand": round(float(std_demand), 2) if not np.isnan(std_demand) else 0.0,
+                "min_demand": float(min_demand),
+                "max_demand": float(max_demand),
+                "total_demand": float(total_demand),
+                "start_date": str(group["week_start"].min().date()),
+                "end_date": str(group["week_start"].max().date()),
+            }
+        )
 
     summary_df = pd.DataFrame(summary_records).sort_values(by="total_demand", ascending=False)
     return summary_df

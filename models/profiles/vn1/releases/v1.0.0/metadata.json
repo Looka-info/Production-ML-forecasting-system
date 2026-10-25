@@ -1,0 +1,47 @@
+{
+  "version": "v1.0.0",
+  "dataset_profile": "vn1",
+  "created_at": "2026-10-25T13:37:42.010374+00:00",
+  "model_type": "Baseline_MovingAvg12_Official",
+  "mlflow_run_id": "63f720aab11041ce8d93313023f3b05a",
+  "checksum_sha256": "2e98277531f730db4d57b6e58bf7da2c62998e5341946da58ec202a9a65ab809",
+  "forecast_horizon": 13,
+  "training_date_range": {
+    "start_date": "2020-07-06",
+    "end_date": "2023-10-02"
+  },
+  "supported_series_count": 0,
+  "feature_columns": [],
+  "validation_metrics": {
+    "vn1_score": 0.4325,
+    "wape": 0.4276,
+    "mae": 207.241,
+    "rmse": 543.6271,
+    "smape": 48.7154,
+    "bias": 2.3742,
+    "relative_bias": 0.0049,
+    "horizon_weeks": 13,
+    "series_count": 250,
+    "sample_count": 3250
+  },
+  "test_metrics": {
+    "status": "Phase 2 predictions generated without ground truth actuals (blind benchmark holdout)"
+  },
+  "quality_status": "HEALTHY",
+  "quality_alert": null,
+  "model_freshness": {
+    "status": "stale_historical_dataset",
+    "dataset_vintage": "VN1 Forecasting Challenge (July 2020 - April 2024)",
+    "training_cutoff_date": "2023-10-02",
+    "is_calibrated_for_modern_retail": false,
+    "stale_threshold_days": 90,
+    "intended_usage": "VN1 Forecasting Challenge research and algorithm benchmarking only.",
+    "refresh_requirements": [
+      "Ingest contemporary retail transaction and price stream with continuous Monday cadence",
+      "Require minimum 52 weeks history for annual seasonality modeling",
+      "Execute 13-week chronological multi-step validation backtests",
+      "Verify validation VN1 score <= 0.7000 before non-override promotion"
+    ]
+  },
+  "notes": "DemandCast v2 production release for VN1 profile. Winning strategy: Baseline_MovingAvg12_Official (VN1 Score: 0.4325, WAPE: 0.4276)."
+}

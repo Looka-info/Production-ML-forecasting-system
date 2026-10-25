@@ -78,7 +78,9 @@ def main():
             }
             for _, row in valid_history_df.iterrows()
         ]
-        assert valid_history[-1]["week_start"] == cutoff_date, f"Expected last date {cutoff_date}, got {valid_history[-1]['week_start']}"
+        assert valid_history[-1]["week_start"] == cutoff_date, (
+            f"Expected last date {cutoff_date}, got {valid_history[-1]['week_start']}"
+        )
 
         res_fc = client.post(
             "/forecast",
@@ -96,7 +98,9 @@ def main():
         logger.info(f"Verified 4-week forecast dates cover: {forecast_dates}")
         logger.info(f"Forecast predictions: {[f['predicted_demand'] for f in forecasts]}")
 
-        assert not any("StaleModelWarning" in w for w in fc_data["warnings"]), "Expected no stale warning for historical cutoff origin."
+        assert not any("StaleModelWarning" in w for w in fc_data["warnings"]), (
+            "Expected no stale warning for historical cutoff origin."
+        )
 
         # 5b. Test Stale-Model Warning: Request ending > 90 days after training cutoff (e.g. April 2012)
         stale_base = pd.to_datetime("2012-01-02")
@@ -113,8 +117,12 @@ def main():
         )
         assert res_stale.status_code == 200
         stale_data = res_stale.json()
-        assert any("StaleModelWarning" in w for w in stale_data["warnings"]), "Expected StaleModelWarning for history > 90 days past cutoff."
-        logger.info(f"StaleModelWarning correctly attached for date {stale_history[-1]['week_start']}: {stale_data['warnings'][0][:80]}...")
+        assert any("StaleModelWarning" in w for w in stale_data["warnings"]), (
+            "Expected StaleModelWarning for history > 90 days past cutoff."
+        )
+        logger.info(
+            f"StaleModelWarning correctly attached for date {stale_history[-1]['week_start']}: {stale_data['warnings'][0][:80]}..."
+        )
 
         # 6. Test unsupported SKU
         res_bad = client.post(

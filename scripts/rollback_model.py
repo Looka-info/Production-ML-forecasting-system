@@ -12,7 +12,9 @@ logger = logging.getLogger("rollback_model")
 
 def main():
     parser = argparse.ArgumentParser(description="Roll back active model pointer to a previous release.")
-    parser.add_argument("--to", dest="target_version", type=str, required=True, help="Target release version to restore.")
+    parser.add_argument(
+        "--to", dest="target_version", type=str, required=True, help="Target release version to restore."
+    )
     parser.add_argument("--reason", type=str, default="Operational rollback requested.", help="Reason for rollback.")
     args = parser.parse_args()
 

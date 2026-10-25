@@ -1,0 +1,39 @@
+{
+  "dataset_name": "VN1 Forecasting Accuracy Challenge",
+  "competition_name": "VN1 Forecasting - Accuracy Challenge",
+  "organizers": "Nicolas Vandeput (SupChains), Flieber, DataSource.ai",
+  "dataset_doi": "10.5281/zenodo.23265413",
+  "competition_url": "https://supchains.com/vn1-forecasting-competition/",
+  "retrieved_at": "2026-10-25T13:33:05.752120+00:00",
+  "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+  "scope": {
+    "entity": "Product-Warehouse sales time-series across e-commerce vendors",
+    "series_count": 15053,
+    "phase0_period": "2020-07-06 to 2023-10-02 (170 weeks)",
+    "phase1_period": "2023-10-09 to 2024-01-01 (13 weeks)",
+    "phase2_period": "2024-01-08 to 2024-04-01 (13 weeks, final competition holdout)",
+    "frequency": "Weekly (Monday week-start)"
+  },
+  "files": {
+    "Phase 0 - Sales.csv": {
+      "sha256": "034f50f7338c08cf1bb6facf8c5b36290f3e74d2e69db83099702d2a52f6534a",
+      "size_bytes": 10804654,
+      "verified": true
+    },
+    "Phase 0 - Price.csv": {
+      "sha256": "9035cce137a4ab27e3caae6c41d80be41f25adb79b9665a55f6cc56db02ebf3a",
+      "size_bytes": 7588298,
+      "verified": true
+    },
+    "Phase 1 - Sales.csv": {
+      "sha256": "59e74d0def7e7f45ce30f53d9643da3112926189e7fed66321fec2095468b4b2",
+      "size_bytes": 1018396,
+      "verified": true
+    },
+    "Phase 1 - Price.csv": {
+      "sha256": "d36f18dc0bd6799897c4b96935acef7526f867a3184db44fb458c0b7fcd07490",
+      "size_bytes": 962283,
+      "verified": true
+    }
+  }
+}

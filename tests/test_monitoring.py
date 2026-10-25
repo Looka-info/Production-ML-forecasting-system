@@ -10,10 +10,12 @@ def test_input_quality_checks():
     monitor = ForecastMonitor()
 
     # History with 4 consecutive zeros
-    df_zeros = pd.DataFrame({
-        "week_start": pd.date_range("2011-01-03", periods=14, freq="W-MON"),
-        "demand": [20.0] * 10 + [0.0, 0.0, 0.0, 0.0],
-    })
+    df_zeros = pd.DataFrame(
+        {
+            "week_start": pd.date_range("2011-01-03", periods=14, freq="W-MON"),
+            "demand": [20.0] * 10 + [0.0, 0.0, 0.0, 0.0],
+        }
+    )
 
     res = monitor.check_input_data_quality(
         series_id="SKU_1",
@@ -30,16 +32,20 @@ def test_forecast_actuals_reconciliation_and_alerts():
     monitor = ForecastMonitor()
 
     dates = pd.date_range("2011-01-03", periods=4, freq="W-MON")
-    preds_df = pd.DataFrame({
-        "series_id": ["SKU_1"] * 4,
-        "week_start": dates,
-        "predicted_demand": [100.0, 100.0, 100.0, 100.0],
-    })
-    actuals_df = pd.DataFrame({
-        "series_id": ["SKU_1"] * 4,
-        "week_start": dates,
-        "demand": [10.0, 10.0, 10.0, 10.0],  # Major discrepancy
-    })
+    preds_df = pd.DataFrame(
+        {
+            "series_id": ["SKU_1"] * 4,
+            "week_start": dates,
+            "predicted_demand": [100.0, 100.0, 100.0, 100.0],
+        }
+    )
+    actuals_df = pd.DataFrame(
+        {
+            "series_id": ["SKU_1"] * 4,
+            "week_start": dates,
+            "demand": [10.0, 10.0, 10.0, 10.0],  # Major discrepancy
+        }
+    )
 
     report = monitor.evaluate_forecast_actuals(preds_df, actuals_df)
     assert report["evaluated_observations"] == 4
@@ -54,16 +60,20 @@ def test_monitoring_relative_bias_threshold_and_units():
     dates = pd.date_range("2011-01-03", periods=4, freq="W-MON")
     # Total actual = 400, Total pred = 520 -> relative bias = (520-400)/400 = +0.30 (+30%)
     # Threshold is 0.25 (25%)
-    preds_df = pd.DataFrame({
-        "series_id": ["SKU_1"] * 4,
-        "week_start": dates,
-        "predicted_demand": [130.0, 130.0, 130.0, 130.0],
-    })
-    actuals_df = pd.DataFrame({
-        "series_id": ["SKU_1"] * 4,
-        "week_start": dates,
-        "demand": [100.0, 100.0, 100.0, 100.0],
-    })
+    preds_df = pd.DataFrame(
+        {
+            "series_id": ["SKU_1"] * 4,
+            "week_start": dates,
+            "predicted_demand": [130.0, 130.0, 130.0, 130.0],
+        }
+    )
+    actuals_df = pd.DataFrame(
+        {
+            "series_id": ["SKU_1"] * 4,
+            "week_start": dates,
+            "demand": [100.0, 100.0, 100.0, 100.0],
+        }
+    )
 
     report = monitor.evaluate_forecast_actuals(preds_df, actuals_df)
     rel_b = report["metrics"]["relative_bias"]
@@ -75,16 +85,20 @@ def test_monitoring_relative_bias_threshold_and_units():
 def test_monitoring_missing_actuals():
     """Verify that when actuals are missing, monitor returns NO_MATCHING_DATA without synthetic values."""
     monitor = ForecastMonitor()
-    preds_df = pd.DataFrame({
-        "series_id": ["SKU_1"],
-        "week_start": pd.to_datetime(["2025-01-06"]),
-        "predicted_demand": [50.0],
-    })
-    actuals_df = pd.DataFrame({
-        "series_id": ["SKU_1"],
-        "week_start": pd.to_datetime(["2020-01-06"]),
-        "demand": [50.0],
-    })
+    preds_df = pd.DataFrame(
+        {
+            "series_id": ["SKU_1"],
+            "week_start": pd.to_datetime(["2025-01-06"]),
+            "predicted_demand": [50.0],
+        }
+    )
+    actuals_df = pd.DataFrame(
+        {
+            "series_id": ["SKU_1"],
+            "week_start": pd.to_datetime(["2020-01-06"]),
+            "demand": [50.0],
+        }
+    )
 
     report = monitor.evaluate_forecast_actuals(preds_df, actuals_df)
     assert report["status"] == "NO_MATCHING_DATA"
@@ -95,10 +109,12 @@ def test_input_data_drift_detection():
     """Verify that input data quality checks flag distribution shift when sample mean deviates significantly."""
     monitor = ForecastMonitor()
     # History with mean = 100.0 vs training baseline mean = 20.0 (std = 5.0) -> 16 standard deviations shift!
-    df_shifted = pd.DataFrame({
-        "week_start": pd.date_range("2011-01-03", periods=14, freq="W-MON"),
-        "demand": [100.0] * 14,
-    })
+    df_shifted = pd.DataFrame(
+        {
+            "week_start": pd.date_range("2011-01-03", periods=14, freq="W-MON"),
+            "demand": [100.0] * 14,
+        }
+    )
 
     res = monitor.check_input_data_quality(
         series_id="SKU_1",
@@ -115,17 +131,21 @@ def test_monitoring_residual_tracking_and_horizon_breakdown():
     """Verify residual tracking computes correct error distribution and breaks down by horizon and series."""
     monitor = ForecastMonitor()
     dates = pd.date_range("2011-01-03", periods=4, freq="W-MON")
-    preds_df = pd.DataFrame({
-        "series_id": ["SKU_1"] * 4,
-        "week_start": dates,
-        "horizon_step": [1, 2, 3, 4],
-        "predicted_demand": [110.0, 120.0, 130.0, 140.0],
-    })
-    actuals_df = pd.DataFrame({
-        "series_id": ["SKU_1"] * 4,
-        "week_start": dates,
-        "demand": [100.0, 100.0, 100.0, 100.0],
-    })
+    preds_df = pd.DataFrame(
+        {
+            "series_id": ["SKU_1"] * 4,
+            "week_start": dates,
+            "horizon_step": [1, 2, 3, 4],
+            "predicted_demand": [110.0, 120.0, 130.0, 140.0],
+        }
+    )
+    actuals_df = pd.DataFrame(
+        {
+            "series_id": ["SKU_1"] * 4,
+            "week_start": dates,
+            "demand": [100.0, 100.0, 100.0, 100.0],
+        }
+    )
 
     report = monitor.evaluate_forecast_actuals(preds_df, actuals_df)
     res_analysis = report["residual_analysis"]

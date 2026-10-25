@@ -35,9 +35,7 @@ def validate_inference_history(
     warnings: list[str] = []
 
     if series_id not in supported_series:
-        raise ValueError(
-            f"Unsupported series_id '{series_id}'. Model supports: {supported_series}"
-        )
+        raise ValueError(f"Unsupported series_id '{series_id}'. Model supports: {supported_series}")
 
     if len(history_records) < min_history_required:
         raise ValueError(
@@ -65,9 +63,7 @@ def validate_inference_history(
     date_diffs = df["week_start"].diff().dropna()
     expected_diff = pd.Timedelta(days=7)
     if not (date_diffs == expected_diff).all():
-        raise ValueError(
-            "Non-continuous weekly history. Dates must be exactly 7 days apart with no gaps."
-        )
+        raise ValueError("Non-continuous weekly history. Dates must be exactly 7 days apart with no gaps.")
 
     # Check temporal contract against model training cutoff
     last_date = df["week_start"].iloc[-1]
@@ -109,9 +105,7 @@ def validate_inference_history(
     # Check for warnings: e.g. recent zero streak
     recent_zeros = (df["demand"].tail(4) == 0).sum()
     if recent_zeros >= 3:
-        warnings.append(
-            f"Series has {recent_zeros} zero-demand weeks in the last 4 observations."
-        )
+        warnings.append(f"Series has {recent_zeros} zero-demand weeks in the last 4 observations.")
 
     return df[["week_start", "demand"]], warnings
 
@@ -156,11 +150,13 @@ def generate_forecast_response(
 
     items = []
     for _, row in forecast_df.iterrows():
-        items.append({
-            "week_start": row["week_start"].strftime("%Y-%m-%d"),
-            "horizon_step": int(row["horizon_step"]),
-            "predicted_demand": round(float(row["predicted_demand"]), 2),
-        })
+        items.append(
+            {
+                "week_start": row["week_start"].strftime("%Y-%m-%d"),
+                "horizon_step": int(row["horizon_step"]),
+                "predicted_demand": round(float(row["predicted_demand"]), 2),
+            }
+        )
 
     response = {
         "forecast_run_id": str(uuid.uuid4()),

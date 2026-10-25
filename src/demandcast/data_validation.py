@@ -86,9 +86,7 @@ def clean_and_validate_transactions(
     report["exclusions"]["invalid_unit_price"] = invalid_price
 
     # 8. Exclude non-merchandise codes
-    non_merch_mask = cleaned["stock_code"].isin(
-        [code.upper() for code in config.non_merchandise_codes]
-    )
+    non_merch_mask = cleaned["stock_code"].isin([code.upper() for code in config.non_merchandise_codes])
     non_merch_count = int(non_merch_mask.sum())
     cleaned = cleaned[~non_merch_mask]
     report["exclusions"]["non_merchandise_codes"] = non_merch_count

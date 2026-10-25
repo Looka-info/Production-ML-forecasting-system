@@ -19,63 +19,73 @@ def sample_transactions_raw():
     for w in range(40):
         t = base_time + timedelta(weeks=w)
         # SKU A
-        records.append({
-            "invoice": f"INV{1000 + w}",
+        records.append(
+            {
+                "invoice": f"INV{1000 + w}",
+                "stock_code": "85123A",
+                "description": "WHITE HANGING HEART T-LIGHT HOLDER",
+                "quantity": 20 + (w % 5),
+                "invoice_date": t,
+                "unit_price": 2.55,
+                "customer_id": 12345,
+                "country": "United Kingdom",
+            }
+        )
+        # SKU B
+        records.append(
+            {
+                "invoice": f"INV{2000 + w}",
+                "stock_code": "84879",
+                "description": "ASSORTED COLOUR BIRD ORNAMENT",
+                "quantity": 15 + (w % 4),
+                "invoice_date": t + timedelta(days=2),
+                "unit_price": 1.69,
+                "customer_id": 12346,
+                "country": "United Kingdom",
+            }
+        )
+
+    # Add cancellations (Invoice starting with 'C')
+    records.append(
+        {
+            "invoice": "C10999",
             "stock_code": "85123A",
-            "description": "WHITE HANGING HEART T-LIGHT HOLDER",
-            "quantity": 20 + (w % 5),
-            "invoice_date": t,
+            "description": "CANCELLATION",
+            "quantity": -5,
+            "invoice_date": base_time + timedelta(weeks=5),
             "unit_price": 2.55,
             "customer_id": 12345,
             "country": "United Kingdom",
-        })
-        # SKU B
-        records.append({
-            "invoice": f"INV{2000 + w}",
-            "stock_code": "84879",
-            "description": "ASSORTED COLOUR BIRD ORNAMENT",
-            "quantity": 15 + (w % 4),
-            "invoice_date": t + timedelta(days=2),
-            "unit_price": 1.69,
-            "customer_id": 12346,
-            "country": "United Kingdom",
-        })
-
-    # Add cancellations (Invoice starting with 'C')
-    records.append({
-        "invoice": "C10999",
-        "stock_code": "85123A",
-        "description": "CANCELLATION",
-        "quantity": -5,
-        "invoice_date": base_time + timedelta(weeks=5),
-        "unit_price": 2.55,
-        "customer_id": 12345,
-        "country": "United Kingdom",
-    })
+        }
+    )
 
     # Add non-merchandise
-    records.append({
-        "invoice": "INV9999",
-        "stock_code": "POST",
-        "description": "POSTAGE",
-        "quantity": 1,
-        "invoice_date": base_time + timedelta(weeks=6),
-        "unit_price": 18.0,
-        "customer_id": 12345,
-        "country": "United Kingdom",
-    })
+    records.append(
+        {
+            "invoice": "INV9999",
+            "stock_code": "POST",
+            "description": "POSTAGE",
+            "quantity": 1,
+            "invoice_date": base_time + timedelta(weeks=6),
+            "unit_price": 18.0,
+            "customer_id": 12345,
+            "country": "United Kingdom",
+        }
+    )
 
     # Add non-positive quantity
-    records.append({
-        "invoice": "INV9998",
-        "stock_code": "85123A",
-        "description": "ZERO QTY",
-        "quantity": 0,
-        "invoice_date": base_time + timedelta(weeks=7),
-        "unit_price": 2.55,
-        "customer_id": 12345,
-        "country": "United Kingdom",
-    })
+    records.append(
+        {
+            "invoice": "INV9998",
+            "stock_code": "85123A",
+            "description": "ZERO QTY",
+            "quantity": 0,
+            "invoice_date": base_time + timedelta(weeks=7),
+            "unit_price": 2.55,
+            "customer_id": 12345,
+            "country": "United Kingdom",
+        }
+    )
 
     # Add duplicate row
     dup = dict(records[0])
@@ -97,11 +107,13 @@ def sample_weekly_demand():
             w_date = base_date + pd.Timedelta(weeks=i)
             # deterministic seasonal & noise pattern
             demand_val = base_demand + 10.0 * np.sin(2 * np.pi * i / 26.0) + (i % 3)
-            records.append({
-                "series_id": sku,
-                "week_start": w_date,
-                "demand": float(max(0.0, demand_val)),
-            })
+            records.append(
+                {
+                    "series_id": sku,
+                    "week_start": w_date,
+                    "demand": float(max(0.0, demand_val)),
+                }
+            )
 
     df = pd.DataFrame(records)
     df["week_start"] = pd.to_datetime(df["week_start"])

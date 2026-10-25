@@ -1,0 +1,7 @@
+vn1_score,wape,mae,rmse,smape,bias,relative_bias,model_name,evaluation_stage,forecast_origin,horizon_weeks,series_count,sample_count,promotion_status
+0.4325,0.4276,207.241,543.6271,48.7154,2.3742,0.0049,Baseline_MovingAvg12_Official,Phase_1_Validation,2023-10-02,13,250,3250,Selected Production Strategy
+0.4325,0.4317,209.2612,568.5712,45.0493,0.3702,0.0008,Baseline_MovingAvg4_DemandCast,Phase_1_Validation,2023-10-02,13,250,3250,Candidate / Benchmark
+0.5106,0.4305,208.652,582.1365,46.0363,-38.8378,-0.0801,Baseline_Naive,Phase_1_Validation,2023-10-02,13,250,3250,Candidate / Benchmark
+0.5663,0.4685,227.0773,589.3869,51.9446,47.4251,0.0978,LightGBM_PriceAware,Phase_1_Validation,2023-10-02,13,250,3250,Candidate / Benchmark
+0.59,0.476,230.694,638.7953,51.7799,55.2784,0.114,LightGBM_NoPrice,Phase_1_Validation,2023-10-02,13,250,3250,Candidate / Benchmark
+0.6274,0.5994,290.5338,636.542,63.9549,13.5849,0.028,Baseline_SeasonalNaive52,Phase_1_Validation,2023-10-02,13,250,3250,Candidate / Benchmark

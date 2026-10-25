@@ -1,6 +1,5 @@
 """Tests for model rollback workflow and state persistence."""
 
-
 from demandcast.config import RegistryConfig
 from demandcast.registry import ModelRegistry
 

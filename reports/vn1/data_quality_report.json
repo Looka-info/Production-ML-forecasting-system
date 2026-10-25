@@ -1,0 +1,23 @@
+{
+  "dataset_name": "VN1 Forecasting Challenge",
+  "total_rows": 2754699,
+  "unique_series_count": 15053,
+  "unique_clients_count": 46,
+  "unique_warehouses_count": 328,
+  "unique_products_count": 11171,
+  "total_weeks_count": 183,
+  "date_range": {
+    "min_date": "2020-07-06",
+    "max_date": "2024-01-01"
+  },
+  "phase0_weeks": 170,
+  "phase1_weeks": 13,
+  "zero_sales_frequency_pct": 70.66,
+  "negative_sales_rows": 0,
+  "missing_price_count": 1946496,
+  "missing_price_pct": 70.66,
+  "mean_sales_units": 13.2,
+  "median_sales_units": 0.0,
+  "p95_sales_units": 47.0,
+  "max_sales_units": 15236.0
+}

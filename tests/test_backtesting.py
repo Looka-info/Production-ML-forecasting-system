@@ -1,6 +1,5 @@
 """Tests for expanding-window chronological backtesting and split integrity."""
 
-
 from demandcast.backtesting import ChronologicalBacktester
 from demandcast.baselines import NaivePersistenceForecaster
 from demandcast.config import BacktestingConfig

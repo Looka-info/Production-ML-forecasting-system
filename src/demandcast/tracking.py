@@ -37,7 +37,9 @@ def init_mlflow(tracking_config: TrackingConfig | None = None) -> str:
         experiment_id = experiment.experiment_id
 
     mlflow.set_experiment(config.experiment_name)
-    logger.info(f"MLflow tracking initialized: URI={tracking_uri}, Experiment={config.experiment_name} (ID: {experiment_id})")
+    logger.info(
+        f"MLflow tracking initialized: URI={tracking_uri}, Experiment={config.experiment_name} (ID: {experiment_id})"
+    )
     return tracking_uri
 
 

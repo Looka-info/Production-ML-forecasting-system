@@ -66,13 +66,15 @@ class NaivePersistenceForecaster(BaseForecaster):
 
         records = []
         for step, f_date in enumerate(future_dates, start=1):
-            records.append({
-                "series_id": series_id,
-                "week_start": f_date,
-                "horizon_step": step,
-                "predicted_demand": max(0.0, last_demand),
-                "model_name": self.name,
-            })
+            records.append(
+                {
+                    "series_id": series_id,
+                    "week_start": f_date,
+                    "horizon_step": step,
+                    "predicted_demand": max(0.0, last_demand),
+                    "model_name": self.name,
+                }
+            )
 
         return pd.DataFrame(records)
 
@@ -130,13 +132,15 @@ class MovingAverageForecaster(BaseForecaster):
 
         records = []
         for step, f_date in enumerate(future_dates, start=1):
-            records.append({
-                "series_id": series_id,
-                "week_start": f_date,
-                "horizon_step": step,
-                "predicted_demand": max(0.0, ma_forecast),
-                "model_name": self.name,
-            })
+            records.append(
+                {
+                    "series_id": series_id,
+                    "week_start": f_date,
+                    "horizon_step": step,
+                    "predicted_demand": max(0.0, ma_forecast),
+                    "model_name": self.name,
+                }
+            )
 
         return pd.DataFrame(records)
 
@@ -211,12 +215,14 @@ class SeasonalNaiveForecaster(BaseForecaster):
             else:
                 pred_val = np.nan
 
-            records.append({
-                "series_id": series_id,
-                "week_start": f_date,
-                "horizon_step": step,
-                "predicted_demand": pred_val,
-                "model_name": self.name,
-            })
+            records.append(
+                {
+                    "series_id": series_id,
+                    "week_start": f_date,
+                    "horizon_step": step,
+                    "predicted_demand": pred_val,
+                    "model_name": self.name,
+                }
+            )
 
         return pd.DataFrame(records)

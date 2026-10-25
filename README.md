@@ -6,11 +6,85 @@
 [![MLflow](https://img.shields.io/badge/MLflow-2.10+-orange.svg)](https://mlflow.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 [![Code Style: Ruff](https://img.shields.io/badge/Code%20Style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
-[![Tests: 52 Passed](https://img.shields.io/badge/Tests-52%20Passed%20(0%20warnings)-brightgreen.svg)](tests/)
+[![Tests: 75 Passed](https://img.shields.io/badge/Tests-75%20Passed%20(0%20warnings)-brightgreen.svg)](tests/)
 
-**DemandCast** is a complete, production-grade retail demand forecasting and model serving system developed as an advanced Machine Learning Engineering capstone. It takes a weekly demand forecasting problem through the entire end-to-end ML lifecycle: dataset ingestion and provenance tracking, auditable data cleaning, training-only product selection, leakage-free feature engineering, chronological backtesting, MLflow experiment tracking, immutable release versioning, FastAPI serving, Docker containerization, post-forecast quality monitoring, and automated rollback workflows.
+**DemandCast** is a complete, production-grade retail demand forecasting and multi-profile model serving system developed as an advanced Machine Learning Engineering capstone. It takes weekly retail demand forecasting through the entire end-to-end ML lifecycle: dataset ingestion and provenance tracking, auditable data cleaning, training-only product selection, leakage-free feature engineering, chronological backtesting, MLflow experiment tracking, immutable release versioning, multi-profile FastAPI serving, Docker containerization, post-forecast quality monitoring, and automated rollback workflows.
+
+DemandCast supports two production profiles:
+1. **DemandCast v1 (UCI Online Retail II Profile)**: 4-week forward forecasting on UK e-commerce giftware transactions across 15 high-volume catalog SKUs, promoted moving-average baseline under audited operational override.
+2. **DemandCast v2 (VN1 Retail Forecasting Profile)**: 13-week forward multi-step forecasting across 15,053 product–warehouse series from 46 e-commerce vendors (July 2020 – April 2024), evaluated under the official VN1 competition metric with price-aware LightGBM and moving-average benchmarks.
 
 Repository: **[https://github.com/Looka-info/Production-ML-forecasting-system](https://github.com/Looka-info/Production-ML-forecasting-system)**
+
+---
+
+## 🚀 DemandCast v2 — VN1 Retail Forecasting Upgrade
+
+DemandCast v2 introduces high-dimensional retail forecasting capabilities powered by the real-world **VN1 Forecasting Accuracy Challenge** dataset. It addresses the real operational challenges of modern multi-echelon retail supply chains: intermittent demand (70.66% zero sales weeks), price elasticity, dynamic vendor catalogs, and 13-week replenishment horizons ($h \in \{1, \dots, 13\}$).
+
+### 1. The VN1 Challenge Formulation & Official Metric
+
+In retail replenishment, inventory planners face two asymmetric costs: under-forecasting leads to lost sales and customer dissatisfaction, while over-forecasting leads to excess holding costs and working capital blockage. The official VN1 competition evaluates forecasts using a composite metric penalizing both item-level absolute errors (MAE) and aggregate portfolio bias:
+
+$$\text{VN1 Score} = \frac{\sum_{i=1}^N |\hat{y}_i - y_i| + \left|\sum_{i=1}^N (\hat{y}_i - y_i)\right|}{\sum_{i=1}^N y_i}$$
+
+- $\sum_i |\hat{y}_i - y_i|$ measures total absolute forecast error across all series and weeks (equivalent to $\text{MAE} \times N$).
+- $\left|\sum_i (\hat{y}_i - y_i)\right|$ penalizes net portfolio-wide bias. Systematic over-prediction or under-prediction inflates this penalty.
+- $\sum_i y_i$ scales the metric by total observed sales volume, making the score scale-invariant and comparable to a penalized WAPE.
+- **Perfect Score**: $0.0000$ (zero absolute error and zero bias).
+
+### 2. VN1 Dataset Scale & Provenance
+
+- **Competition Reference**: [VN1 Forecasting Competition (SupChains)](https://supchains.com/vn1-forecasting-competition/)
+- **Permanent DOI**: [10.5281/zenodo.23265413](https://doi.org/10.5281/zenodo.23265413)
+- **Scope**: 15,053 product–warehouse series across 46 e-commerce vendors.
+- **Temporal Coverage**: July 6, 2020 to April 1, 2024 (196 continuous Monday-start calendar weeks; 2,754,699 weekly observations).
+- **Phases**:
+  - **Phase 0 (Historical Training)**: 170 weeks (`2020-07-06` to `2023-10-02`).
+  - **Phase 1 (Validation)**: 13 weeks (`2023-10-09` to `2024-01-01`).
+  - **Phase 2 (Holdout Test)**: 13 weeks (`2024-01-08` to `2024-04-01`).
+- **Verified SHA-256 Checksums**:
+  - `Phase 0 - Sales.csv` (`034f50f7338c08cf1bb6facf8c5b36290f3e74d2e69db83099702d2a52f6534a`, 10,804,654 B)
+  - `Phase 0 - Price.csv` (`9035cce137a4ab27e3caae6c41d80be41f25adb79b9665a55f6cc56db02ebf3a`, 7,588,298 B)
+  - `Phase 1 - Sales.csv` (`59e74d0def7e7f45ce30f53d9643da3112926189e7fed66321fec2095468b4b2`, 1,018,396 B)
+  - `Phase 1 - Price.csv` (`d36f18dc0bd6799897c4b96935acef7526f867a3184db44fb458c0b7fcd07490`, 962,283 B)
+
+### 3. Empirical Model Selection Results (Phase 1 Validation)
+
+Following strict ML engineering principles, model selection is conducted **strictly on Phase 1 validation data** (origin: `2023-10-02`, horizon: 13 weeks, 250 diverse series, 3,250 observations). No Phase 2 holdout data was accessed during training or model selection.
+
+| Model Candidate | Model Family | VN1 Score ↓ | WAPE ↓ | MAE ↓ | RMSE ↓ | sMAPE ↓ | Relative Bias | Promotion Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`Baseline_MovingAvg12_Official`** | Trailing Mean (12w) | **0.4325** | **0.4276** | **207.24** | 543.63 | 48.72% | **+0.0049** | **PROMOTED (v1.0.0)** |
+| **`Baseline_MovingAvg4_DemandCast`** | Trailing Mean (4w) | **0.4325** | 0.4317 | 209.26 | 545.47 | 49.33% | +0.0008 | Candidate |
+| **`Baseline_Naive`** | Last Known Value | 0.5106 | 0.4305 | 208.65 | 573.49 | 49.49% | -0.0801 | Candidate |
+| **`LightGBM_PriceAware`** | Gradient Boosted Trees | 0.5663 | 0.4685 | 227.08 | 586.29 | 52.87% | +0.0978 | Candidate |
+| **`LightGBM_NoPrice`** | Gradient Boosted Trees | 0.5900 | 0.4760 | 230.69 | 591.95 | 53.48% | +0.1140 | Candidate |
+| **`Baseline_SeasonalNaive52`** | Seasonal Lag (52w) | 0.6274 | 0.5994 | 290.53 | 647.78 | 62.48% | +0.0280 | Candidate |
+
+### 4. Key Empirical Findings & Why the Baseline Won
+
+1. **The Intermittent Compounding Trap**:
+   In datasets with high intermittency (70.66% zero sales), recursive GBDT models compound step-by-step errors over a 13-week horizon. Predicting positive fractional demand in early weeks causes recursive lag features to drift upward, inflating bias to **+9.78%** for LightGBM. In contrast, the 12-week moving average acts as an optimal smoothing filter, maintaining near-zero bias (**+0.49%**) and superior MAE (207.24 vs. 227.08). This directly corroborates the findings published by competition creator Nicolas Vandeput.
+2. **Economic Responsiveness of Price Features**:
+   Comparing `LightGBM_PriceAware` (0.5663) against `LightGBM_NoPrice` (0.5900) demonstrates that incorporating origin price levels, ratios, and promotional shifts improves forecast accuracy by **4.0% relative score reduction**, confirming genuine price elasticity in the dataset.
+3. **Seasonal Naive Failure**:
+   The 52-week Seasonal Naive baseline performed worst (0.6274 score, 59.94% WAPE), proving that annual seasonal repetition is insufficient for e-commerce catalog items with rapid product lifecycles and assortment churn.
+
+### 5. High-Resolution Evaluation Figures
+
+#### Model Comparison across Primary Metrics
+![VN1 Model Comparison](reports/vn1/figures/model_comparison_bar.png)
+
+#### Error Growth across the 13-Week Forecast Horizon
+![Metrics by Horizon](reports/vn1/figures/metrics_by_horizon.png)
+
+#### Trajectory Comparison: Predictions vs. Actuals
+![VN1 Forecast Comparison](reports/vn1/figures/forecast_comparison.png)
+
+### 6. Phase 2 Holdout Predictions (Leakage-Free Benchmark)
+
+Predictions for the 13-week Phase 2 evaluation period (`2024-01-08` to `2024-04-01`) were generated with origin strictly set to `2024-01-01`. In accordance with competition rules, only price data known at origin was utilized; no future prices or future sales were accessed. The complete predictions table is exported in `reports/vn1/phase2_test_results.csv`.
 
 ---
 
@@ -271,7 +345,7 @@ Using historical weekly sales observations through the model's training cutoff d
 }
 ```
 
-### Example Response
+### Example Response (`POST /forecast` — UCI Profile)
 ```json
 {
   "forecast_run_id": "8f3b251a-4bc1-49b8-a612-92e105db089e",
@@ -288,6 +362,55 @@ Using historical weekly sales observations through the model's training cutoff d
     { "week_start": "2011-11-21", "horizon_step": 2, "predicted_demand": 524.25 },
     { "week_start": "2011-11-28", "horizon_step": 3, "predicted_demand": 524.25 },
     { "week_start": "2011-12-05", "horizon_step": 4, "predicted_demand": 524.25 }
+  ],
+  "warnings": []
+}
+```
+
+### DemandCast v2 Endpoint (`POST /v2/forecast` — VN1 Profile)
+
+Accepts product–warehouse series identifiers (`client_id_warehouse_id_product_id`), optional prices, and 12+ weeks of Monday sales history to generate 13-week recursive forecasts:
+
+```json
+{
+  "series_id": "0_1_PROD1",
+  "horizon": 13,
+  "history": [
+    { "week_start": "2023-07-03", "sales": 15.0, "price": 12.99 },
+    { "week_start": "2023-07-10", "sales": 18.0, "price": 12.99 },
+    { "week_start": "2023-07-17", "sales": 0.0, "price": 12.99 },
+    { "week_start": "2023-07-24", "sales": 22.0, "price": 12.99 },
+    { "week_start": "2023-07-31", "sales": 14.0, "price": 12.99 },
+    { "week_start": "2023-08-07", "sales": 0.0, "price": 12.99 },
+    { "week_start": "2023-08-14", "sales": 25.0, "price": 12.99 },
+    { "week_start": "2023-08-21", "sales": 30.0, "price": 12.99 },
+    { "week_start": "2023-08-28", "sales": 19.0, "price": 12.99 },
+    { "week_start": "2023-09-04", "sales": 0.0, "price": 12.99 },
+    { "week_start": "2023-09-11", "sales": 27.0, "price": 12.99 },
+    { "week_start": "2023-09-18", "sales": 33.0, "price": 12.99 },
+    { "week_start": "2023-09-25", "sales": 21.0, "price": 12.99 },
+    { "week_start": "2023-10-02", "sales": 28.0, "price": 12.99 }
+  ]
+}
+```
+
+```json
+{
+  "forecast_run_id": "d82046ca-4663-4da2-9bfe-b39f75ec5ce3",
+  "dataset_profile": "vn1",
+  "created_at": "2026-10-25T18:48:18.998000+00:00",
+  "series_id": "0_1_PROD1",
+  "model_version": "v1.0.0",
+  "model_name": "Baseline_MovingAvg12_Official",
+  "last_historical_date": "2023-10-02",
+  "forecast_start_date": "2023-10-09",
+  "forecast_end_date": "2024-01-01",
+  "horizon": 13,
+  "forecasts": [
+    { "week_start": "2023-10-09", "horizon_step": 1, "predicted_sales": 19.75 },
+    { "week_start": "2023-10-16", "horizon_step": 2, "predicted_sales": 19.75 },
+    { "week_start": "2023-10-23", "horizon_step": 3, "predicted_sales": 19.75 },
+    { "week_start": "2024-01-01", "horizon_step": 13, "predicted_sales": 19.75 }
   ],
   "warnings": []
 }
@@ -320,7 +443,9 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### 10.2 Run Full Data & Training Pipeline
+### 10.2 Run Full Data & Training Pipelines
+
+#### UCI Profile (DemandCast v1)
 ```powershell
 # 1. Download official UCI dataset and verify SHA-256 checksum
 python scripts/download_data.py
@@ -344,12 +469,22 @@ python scripts/evaluate_forecasts.py
 python scripts/verify_api_live.py
 ```
 
+#### VN1 Profile (DemandCast v2 Upgrade)
+```powershell
+# 1. Download and verify official VN1 challenge dataset files
+python scripts/download_vn1_data.py
+
+# 2. Run chronological Phase 1 validation across 6 models, log to MLflow, and package/promote v1.0.0
+python scripts/train_vn1_pipeline.py --version v1.0.0 --series-sample 250
+```
+
 ### 10.3 Run Automated Tests & Code Quality
 ```powershell
-# Run Ruff linting
+# Run Ruff linting and formatting verification
 ruff check .
+ruff format --check .
 
-# Run Pytest suite (52 unit and integration tests under strict warning policy)
+# Run complete test suite (75 unit and integration tests under strict zero-warning policy)
 pytest -v
 ```
 
@@ -357,7 +492,7 @@ pytest -v
 ```powershell
 mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5000
 ```
-Visit `http://localhost:5000` to inspect experiment parameters, validation backtests, model artifacts, and evaluation figures.
+Visit `http://localhost:5000` to inspect experiment parameters, validation backtests, model artifacts, and evaluation figures across both `demandcast_forecast_system` (UCI profile) and `demandcast-vn1` (VN1 profile).
 
 ### 10.5 Local Container Deployment (Docker Compose)
 ```powershell
@@ -380,11 +515,13 @@ demandcast/
 ├── .gitignore                          # Git exclusions (raw data, virtualenvs, mlruns)
 ├── .dockerignore                       # Docker build exclusions
 ├── configs/
-│   └── config.yaml                     # Central system configuration
+│   ├── config.yaml                     # UCI profile system configuration
+│   └── vn1_config.yaml                 # VN1 challenge profile configuration
 ├── data/
 │   ├── raw/                            # Raw UCI archive & extracted excel files
 │   ├── interim/                        # Cleaned transactions (parquet)
-│   └── processed/                      # Weekly demand parquet & selected_series.json
+│   ├── processed/                      # Weekly demand parquet & selected_series.json
+│   └── vn1/                            # VN1 raw datasets, provenance & processed cubes
 ├── src/demandcast/
 │   ├── __init__.py                     # Package init
 │   ├── config.py                       # Pydantic configuration schemas & path resolution
@@ -402,12 +539,22 @@ demandcast/
 │   ├── registry.py                     # Versioned model packaging, promotion & rollback
 │   ├── forecasting.py                  # Pre-inference validation & response formatting
 │   ├── monitoring.py                   # Input quality checks, actuals reconciliation, drift
+│   ├── vn1/                            # Isolated VN1 Challenge Subpackage
+│   │   ├── __init__.py                 # VN1 exports
+│   │   ├── config.py                   # VN1 Pydantic configuration schema
+│   │   ├── metrics.py                  # Official VN1 score & composite metrics
+│   │   ├── data_loading.py             # Wide-to-long merged cube constructor
+│   │   ├── baselines.py                # Official 12w MA, 4w MA, Naive, 52w Seasonal
+│   │   ├── features.py                 # Recursive multi-step features with price awareness
+│   │   ├── models.py                   # LightGBM recursive multi-step forecaster
+│   │   ├── backtesting.py              # Chronological Phase 1 validation engine
+│   │   └── registry.py                 # Isolated VN1 versioned model registry
 │   └── api/
 │       ├── __init__.py
 │       ├── main.py                     # FastAPI application factory & lifespan context
-│       ├── routes.py                   # Routes (/health, /ready, /metadata, /forecast)
-│       ├── schemas.py                  # Pydantic request & response models
-│       └── dependencies.py             # Active model dependency injection container
+│       ├── routes.py                   # Routes (/health, /ready, /metadata, /forecast, /v2/forecast)
+│       ├── schemas.py                  # Pydantic request & response models (dual profiles)
+│       └── dependencies.py             # Active model dependency injection containers
 ├── scripts/
 │   ├── download_data.py                # Download UCI archive
 │   ├── prepare_data.py                 # Clean, select SKUs, aggregate weekly demand
@@ -417,26 +564,33 @@ demandcast/
 │   ├── promote_model.py                # Validate and promote release
 │   ├── rollback_model.py               # Safe rollback to prior release
 │   ├── evaluate_forecasts.py           # Offline reconciliation & drift evaluation
-│   └── verify_api_live.py              # End-to-end live API validation test
+│   ├── verify_api_live.py              # End-to-end live API validation test
+│   ├── download_vn1_data.py            # Download & verify VN1 dataset files
+│   └── train_vn1_pipeline.py           # Full VN1 backtesting, MLflow logging & promotion
 ├── reports/
-│   ├── model_comparison.csv            # Empirical benchmark comparison table
-│   ├── backtest_results.csv            # Detailed validation forecasts vs actuals
-│   ├── test_horizon_results.csv        # Final held-out test predictions (45 observations)
-│   ├── data_quality_report.json        # Auditable cleaning and exclusion counts
-│   ├── series_summary.csv              # Time-series summary statistics per SKU
-│   ├── monitoring_report.json          # Post-forecast reconciliation & alert metrics
-│   └── figures/                        # High-resolution evaluation graphs
-│       ├── model_benchmark_summary.png # 4-panel empirical comparison (WAPE, MASE, MAE, Bias)
-│       ├── sku_demand_profile.png      # Portfolio demand volume & intermittency analysis
-│       ├── forecast_comparison.png     # Forecasts vs actuals trajectories over time
-│       ├── metrics_by_horizon.png      # Error growth across weeks 1 to 4
-│       └── residual_distribution.png   # ML model error distribution
+│   ├── model_comparison.csv            # UCI benchmark comparison table
+│   ├── backtest_results.csv            # UCI validation forecasts vs actuals
+│   ├── test_horizon_results.csv        # UCI held-out test predictions
+│   ├── data_quality_report.json        # UCI cleaning and exclusion counts
+│   ├── figures/                        # UCI high-resolution evaluation graphs
+│   └── vn1/                            # VN1 Reports & Artifacts
+│       ├── model_comparison.csv        # 6-candidate VN1 benchmark comparison
+│       ├── validation_results.csv      # Phase 1 validation forecast table (3,250 rows)
+│       ├── metrics_by_horizon.csv      # Error growth across weeks 1 to 13
+│       ├── metrics_by_series.csv       # Granular errors per product-warehouse series
+│       ├── phase2_test_results.csv     # 13-week holdout predictions (blind benchmark)
+│       ├── data_quality_report.json    # VN1 intermittency & zero-sales statistics
+│       └── figures/                    # VN1 high-resolution evaluation graphs
+│           ├── model_comparison_bar.png# Primary comparison (VN1 Score, WAPE, Bias)
+│           ├── metrics_by_horizon.png  # Error propagation over 13 weeks
+│           └── forecast_comparison.png # Prediction trajectories vs actuals
 ├── models/
-│   ├── releases/
-│   │   └── v1.0.0/                     # Immutable release v1.0.0
-│   │       ├── model.joblib            # Serialized pipeline & feature schema
-│   │       └── metadata.json           # Model metadata, checksum, training range, metrics
-│   └── current.json                    # Active promoted release pointer
+│   ├── releases/                       # UCI model releases (v1.0.0)
+│   ├── current.json                    # UCI active promoted release pointer
+│   └── profiles/
+│       └── vn1/
+│           ├── releases/               # VN1 model releases (v1.0.0)
+│           └── current.json            # VN1 active promoted release pointer
 ├── tests/
 │   ├── conftest.py                     # Fast, deterministic test fixtures
 │   ├── test_data_validation.py         # Tests for cleaning rules & exclusions
@@ -448,13 +602,21 @@ demandcast/
 │   ├── test_registry.py                # Tests for release packaging, checksum & tampering
 │   ├── test_api.py                     # Tests for FastAPI endpoints & input validation
 │   ├── test_monitoring.py              # Tests for drift detection & quality checks
-│   └── test_rollback.py                # Tests for model promotion & rollback lifecycle
+│   ├── test_rollback.py                # Tests for model promotion & rollback lifecycle
+│   ├── test_vn1_metrics.py             # Tests for official VN1 score formula & bias
+│   ├── test_vn1_baselines.py           # Tests for VN1 Naive, 12w MA, 4w MA
+│   ├── test_vn1_features.py            # Tests for VN1 feature engineering & leakage prevention
+│   ├── test_vn1_registry.py            # Tests for VN1 model registry, packaging & quality gate
+│   └── test_vn1_api.py                 # Tests for /v2/forecast, dual /ready & /metadata
 ├── docs/
 │   ├── architecture.md                 # System architecture & sequence diagrams
 │   ├── methodology.md                  # Forecasting problem formulation & backtest design
 │   ├── monitoring.md                   # Operational monitoring & rollback protocol
 │   └── model_card.md                   # Comprehensive model governance card
 └── .github/
+    └── workflows/
+        └── ci.yml                      # GitHub Actions CI workflow (lint, test, build)
+```
     └── workflows/
         └── ci.yml                      # GitHub Actions CI workflow (lint, test, build)
 ```

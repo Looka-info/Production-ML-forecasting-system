@@ -50,9 +50,7 @@ class ForecastMonitor:
                 streak = 0
 
         if max_streak >= self.config.zero_demand_streak_warning:
-            warnings.append(
-                f"Consecutive zero-demand streak of {max_streak} weeks detected."
-            )
+            warnings.append(f"Consecutive zero-demand streak of {max_streak} weeks detected.")
 
         # 3. Input-data drift check comparing incoming feature distribution against training reference
         input_drift_info: dict[str, Any] = {"drift_detected": False}
@@ -80,13 +78,15 @@ class ForecastMonitor:
                 )
                 input_drift_info["drift_detected"] = True
 
-            input_drift_info.update({
-                "incoming_mean": round(incoming_mean, 2),
-                "incoming_std": round(incoming_std, 2),
-                "reference_mean": round(ref_mean, 2),
-                "reference_std": round(ref_std, 2),
-                "mean_shift_std_ratio": round(std_diff, 2),
-            })
+            input_drift_info.update(
+                {
+                    "incoming_mean": round(incoming_mean, 2),
+                    "incoming_std": round(incoming_std, 2),
+                    "reference_mean": round(ref_mean, 2),
+                    "reference_std": round(ref_std, 2),
+                    "mean_shift_std_ratio": round(std_diff, 2),
+                }
+            )
 
         overall_status = "INVALID" if len(issues) > 0 else ("WARNING" if len(warnings) > 0 else "HEALTHY")
 
@@ -119,9 +119,7 @@ class ForecastMonitor:
 
         merged = pd.merge(
             preds,
-            actuals_df[["series_id", "week_start", "demand"]].rename(
-                columns={"demand": "actual_demand"}
-            ),
+            actuals_df[["series_id", "week_start", "demand"]].rename(columns={"demand": "actual_demand"}),
             on=["series_id", "week_start"],
             how="inner",
         )

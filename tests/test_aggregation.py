@@ -1,6 +1,5 @@
 """Tests for weekly demand aggregation and training-only product selection."""
 
-
 import pandas as pd
 
 from demandcast.aggregation import (
@@ -61,20 +60,22 @@ def test_to_monday_week_start_interval_semantics_across_week_boundaries():
 
     to the exact Monday 00:00:00, and transitions cleanly at midnight on Monday.
     """
-    timestamps = pd.Series([
-        "2011-12-05 00:00:00",  # Monday start
-        "2011-12-05 08:30:00",  # Monday morning
-        "2011-12-05 23:59:59",  # Monday night
-        "2011-12-06 14:00:00",  # Tuesday
-        "2011-12-07 12:00:00",  # Wednesday
-        "2011-12-08 16:30:00",  # Thursday
-        "2011-12-09 12:50:00",  # Friday (UCI raw dataset max date)
-        "2011-12-10 18:00:00",  # Saturday
-        "2011-12-11 00:00:00",  # Sunday start
-        "2011-12-11 23:59:59",  # Sunday end boundary
-        "2011-12-12 00:00:00",  # Next Monday boundary
-        "2011-12-12 00:00:01",  # Next Monday + 1 sec
-    ])
+    timestamps = pd.Series(
+        [
+            "2011-12-05 00:00:00",  # Monday start
+            "2011-12-05 08:30:00",  # Monday morning
+            "2011-12-05 23:59:59",  # Monday night
+            "2011-12-06 14:00:00",  # Tuesday
+            "2011-12-07 12:00:00",  # Wednesday
+            "2011-12-08 16:30:00",  # Thursday
+            "2011-12-09 12:50:00",  # Friday (UCI raw dataset max date)
+            "2011-12-10 18:00:00",  # Saturday
+            "2011-12-11 00:00:00",  # Sunday start
+            "2011-12-11 23:59:59",  # Sunday end boundary
+            "2011-12-12 00:00:00",  # Next Monday boundary
+            "2011-12-12 00:00:01",  # Next Monday + 1 sec
+        ]
+    )
 
     week_starts = to_monday_week_start(timestamps)
 

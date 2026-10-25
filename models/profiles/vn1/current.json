@@ -1,0 +1,11 @@
+{
+  "dataset_profile": "vn1",
+  "current_version": "v1.0.0",
+  "promoted_at": "2026-10-25T13:37:42.011641+00:00",
+  "checksum_sha256": "2e98277531f730db4d57b6e58bf7da2c62998e5341946da58ec202a9a65ab809",
+  "release_dir": "models/profiles/vn1/releases/v1.0.0",
+  "reason": "Promoted winning VN1 model on Phase 1 validation",
+  "quality_status": "HEALTHY",
+  "quality_alert": null,
+  "model_freshness_status": "stale_historical_dataset"
+}
